@@ -108,7 +108,13 @@ export async function generateAcademicZKPDFProof(
 
     } catch (error) {
         console.error('❌ zkPDF circuit generation failed:', error)
-        throw new Error('Failed to generate zkPDF proof for academic credential')
+        console.error('Input details:', {
+            walletAddress: walletAddress.toLowerCase(),
+            degreeType,
+            institution,
+            pdfSize: pdfBytes.length
+        })
+        throw new Error(`Failed to generate zkPDF proof for academic credential: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
 }
 
@@ -278,13 +284,14 @@ async function storeZKPDFProof(
     const scoreField = proofType === 'academic' ? 'education_score' : 'github_score'
     const proofsField = proofType === 'academic' ? 'education_proofs' : 'github_proofs'
 
-    // First get current scores to calculate new total
-    const { data: currentData } = await supabase
+    // First get current scores to calculate new total (handle case where record doesn't exist)
+    const { data: currentData, error: fetchError } = await supabase
         .from('zk_credentials')
-        .select('education_score, github_score, social_score')
+        .select('education_score, github_score, social_score, has_degree, has_certification, github_username')
         .eq('wallet_address', walletAddress.toLowerCase())
-        .single()
+        .maybeSingle() // Use maybeSingle instead of single to handle no results
 
+    // Handle case where user doesn't exist yet
     const currentEducationScore = currentData?.education_score || 0
     const currentGithubScore = currentData?.github_score || 0
     const currentSocialScore = currentData?.social_score || 0
@@ -295,9 +302,7 @@ async function storeZKPDFProof(
         newTotalScore = proof.reputationScore + currentGithubScore + currentSocialScore
     } else if (proofType === 'github') {
         newTotalScore = currentEducationScore + proof.reputationScore + currentSocialScore
-    }
-
-    // Determine reputation tier based on new total score
+    }    // Determine reputation tier based on new total score
     let reputationTier: 'newcomer' | 'student' | 'developer' | 'senior-dev' | 'blockchain-expert' = 'newcomer'
     if (newTotalScore >= 300) reputationTier = 'blockchain-expert'
     else if (newTotalScore >= 200) reputationTier = 'senior-dev'
@@ -306,9 +311,15 @@ async function storeZKPDFProof(
 
     const updateData = {
         wallet_address: walletAddress.toLowerCase(),
-        [scoreField]: proof.reputationScore,
-        total_base_score: newTotalScore,
+        education_score: proofType === 'academic' ? proof.reputationScore : currentEducationScore,
+        github_score: proofType === 'github' ? proof.reputationScore : currentGithubScore,
+        social_score: currentSocialScore,
+        // Don't set total_base_score - it's a generated column
         reputation_tier: reputationTier,
+        completed_onboarding: false, // Will be updated later when full onboarding is done
+        has_degree: proofType === 'academic' ? true : (currentData?.has_degree || false),
+        has_certification: proofType === 'academic' ? true : (currentData?.has_certification || false),
+        github_username: currentData?.github_username || null,
         [proofsField]: JSON.stringify([{
             proofId: proof.proofId,
             proofType,
@@ -326,16 +337,22 @@ async function storeZKPDFProof(
         updated_at: new Date().toISOString()
     }
 
-    const { error } = await supabase
+    // Use upsert to create record if it doesn't exist
+    const { data: upsertedData, error } = await supabase
         .from('zk_credentials')
-        .upsert(updateData)
+        .upsert(updateData, {
+            onConflict: 'wallet_address'
+        })
+        .select()
 
     if (error) {
         console.error('❌ Failed to store zkPDF proof:', error)
-        throw new Error('Database storage failed')
+        console.error('Error details:', error)
+        throw new Error(`Database storage failed: ${error.message}`)
     }
 
     console.log('✅ zkPDF proof stored in database')
+    console.log('Updated record:', upsertedData)
 }
 
 /**
