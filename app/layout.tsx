@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Suspense } from "react"
+import { Providers } from "./providers"
 
 import { Press_Start_2P, JetBrains_Mono } from "next/font/google"
 
@@ -33,7 +34,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${pixel.variable} ${jetbrains.variable} antialiased`}>
       <body className="font-sans">
-        <Suspense fallback={null}>{children}</Suspense>
+        <Providers>
+          <Suspense fallback={null}>{children}</Suspense>
+        </Providers>
         <Analytics />
       </body>
     </html>
