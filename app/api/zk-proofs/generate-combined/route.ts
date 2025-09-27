@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         if (proofTypes.includes('github')) {
             try {
                 console.log('🐙 Generating GitHub zkPDF proof...')
-                
+
                 // This would need to get GitHub data from the database or re-authenticate
                 // For now, we'll simulate with stored data
                 const githubResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'}/api/zk-proofs/github-clean`, {

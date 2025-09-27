@@ -296,7 +296,7 @@ export function ZKOnboarding() {
                                 🚀 Ready to generate zkPDF proofs! You can generate proofs with your current credentials and add more later.
                             </span>
                         </div>
-                        
+
                         {/* Show what credentials are available */}
                         <div className="text-xs text-muted-foreground space-y-1">
                             {credentials.github_username && (
@@ -316,12 +316,12 @@ export function ZKOnboarding() {
                                 try {
                                     const hasGithub = credentials.github_username && credentials.github_score === 0
                                     const hasAcademic = (credentials.has_degree || credentials.has_certification) && credentials.education_score === 0
-                                    
+
                                     let proofMessage = '🏆 ETHEREUM FOUNDATION zkPDF\n\nGenerating zero-knowledge proofs for available credentials:\n'
                                     if (hasGithub) proofMessage += '✓ GitHub contributions (OAuth verification)\n'
                                     if (hasAcademic) proofMessage += '✓ Academic credentials (PDF re-upload required)\n'
                                     proofMessage += '\nThis process preserves your privacy while proving qualifications.'
-                                    
+
                                     alert(proofMessage)
 
                                     let results: string[] = []
@@ -459,7 +459,7 @@ export function ZKOnboarding() {
                                 � Start building your zkPDF-verified reputation! You can begin with any credential and add more later.
                             </span>
                         </div>
-                        
+
                         {/* Quick Start Options */}
                         <div className="text-xs text-muted-foreground p-3 bg-muted/50 rounded-lg">
                             💡 <strong>Flexible zkPDF Options:</strong>
