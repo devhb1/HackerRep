@@ -269,7 +269,17 @@ export function ZKOnboarding() {
                             key={step.id}
                             className={`p-4 cursor-pointer transition-all hover:border-primary/40 ${isActive ? 'border-primary bg-primary/5' : ''
                                 } ${step.completed ? 'border-green-500/40' : 'border-muted'}`}
-                            onClick={() => setCurrentStep(isActive ? null : step.id)}
+                            onClick={(e) => {
+                                // Don't toggle if clicking on form elements
+                                if (e.target instanceof HTMLSelectElement || 
+                                    e.target instanceof HTMLInputElement || 
+                                    e.target instanceof HTMLButtonElement ||
+                                    e.target instanceof HTMLLabelElement ||
+                                    (e.target as HTMLElement).closest('select, input, button, label')) {
+                                    return
+                                }
+                                setCurrentStep(isActive ? null : step.id)
+                            }}
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
@@ -316,13 +326,19 @@ export function ZKOnboarding() {
                     <div className="flex gap-2">
                         <PixelButton
                             variant="accent"
-                            onClick={() => setCurrentStep('education')}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setCurrentStep('education')
+                            }}
                         >
                             Add Academic Credentials
                         </PixelButton>
                         <PixelButton
                             variant="accent"
-                            onClick={() => setCurrentStep('github')}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setCurrentStep('github')
+                            }}
                         >
                             Connect GitHub
                         </PixelButton>
@@ -331,7 +347,10 @@ export function ZKOnboarding() {
                 {!hasGeneratedBaseReputation && credentials.has_degree && credentials.github_username && (
                     <PixelButton
                         variant="primary"
-                        onClick={generateZKProofReputation}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            generateZKProofReputation()
+                        }}
                         disabled={generatingReputation}
                         className="text-lg px-8 py-4"
                     >
@@ -342,13 +361,19 @@ export function ZKOnboarding() {
                     <div className="flex gap-2">
                         <PixelButton
                             variant="primary"
-                            onClick={() => window.location.href = '/search'}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                window.location.href = '/search'
+                            }}
                         >
                             Start Networking
                         </PixelButton>
                         <PixelButton
                             variant="muted"
-                            onClick={() => window.location.href = '/leaderboard'}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                window.location.href = '/leaderboard'
+                            }}
                         >
                             View Leaderboard
                         </PixelButton>
@@ -607,6 +632,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                         <select
                             value={selectedDegree}
                             onChange={(e) => setSelectedDegree(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
                             className="w-full pixel-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                             style={{ maxHeight: '200px', overflowY: 'auto' }}
                             required
@@ -627,6 +653,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                             type="text"
                             value={institution}
                             onChange={(e) => setInstitution(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
                             placeholder="e.g., Stanford University, MIT, General Assembly..."
                             className="w-full pixel-border bg-background px-3 py-2 text-foreground"
                             required
@@ -645,10 +672,11 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                             type="file"
                             accept=".pdf"
                             onChange={handleFileUpload}
+                            onClick={(e) => e.stopPropagation()}
                             className="hidden"
                             id="certificate-upload"
                         />
-                        <label htmlFor="certificate-upload" className="cursor-pointer">
+                        <label htmlFor="certificate-upload" className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
                             <div className="inline-block">
                                 <PixelButton variant="muted" type="button" className="pointer-events-none">
                                     Choose PDF File
@@ -682,7 +710,10 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
                             <PixelButton
                                 variant="accent"
-                                onClick={submitEducationCredential}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    submitEducationCredential()
+                                }}
                                 disabled={uploading || !selectedDegree || !institution.trim() || !file || zkProofStatus !== 'idle'}
                                 className="w-full"
                                 type="button"
@@ -753,7 +784,10 @@ function GitHubStep({ credentials, onUpdate, walletAddress }: { credentials: ZKC
                     </p>
                     <PixelButton
                         variant="accent"
-                        onClick={connectGitHub}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            connectGitHub()
+                        }}
                         disabled={connecting}
                         className="w-full"
                         type="button"

@@ -184,6 +184,8 @@ export async function GET(request: NextRequest) {
             }
         } catch (dbError) {
             console.error('Database update failed:', dbError)
+            console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing')
+            console.error('Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing')
             // Still redirect but with more specific error info
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
             const errorMessage = dbError instanceof Error ? dbError.message : 'Database connection failed'
