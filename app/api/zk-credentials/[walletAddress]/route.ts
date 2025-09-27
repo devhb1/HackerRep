@@ -46,8 +46,8 @@ export async function GET(
                     education_score: 0,
                     github_score: 0,
                     social_score: 0,
-                    total_base_score: 0,
-                    reputation_tier: 'newcomer',
+                    // total_base_score is a generated column - don't insert it
+                    // reputation_tier is a generated column - don't insert it
                     completed_onboarding: false,
                     has_degree: false,
                     has_certification: false,
