@@ -9,21 +9,40 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state')
 
     if (!code) {
+        // Get wallet address from request headers or query params
+        const walletAddress = request.headers.get('x-wallet-address') || request.nextUrl.searchParams.get('wallet')
+        
+        if (!walletAddress) {
+            return NextResponse.json({ error: 'Wallet address required' }, { status: 400 })
+        }
+
         // Redirect to GitHub OAuth
         const clientId = process.env.GITHUB_CLIENT_ID
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
         // Ensure no double slashes in redirect URI
         const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/auth/github`
         const scope = 'read:user user:email'
-        const stateParam = crypto.randomBytes(32).toString('hex')
+        // Include wallet address in state for callback
+        const stateParam = crypto.createHash('sha256').update(walletAddress + Date.now().toString()).digest('hex')
 
         const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${stateParam}`
 
-        return NextResponse.redirect(githubAuthUrl)
+        // Store wallet address temporarily (in production, use Redis or database)
+        // For now, we'll pass it in the redirect URL
+        const redirectWithWallet = `${githubAuthUrl}&wallet=${encodeURIComponent(walletAddress)}`
+
+        return NextResponse.redirect(redirectWithWallet)
     }
 
     // Handle OAuth callback
     try {
+        // Get wallet address from state or query params
+        const walletAddress = request.nextUrl.searchParams.get('wallet')
+        
+        if (!walletAddress) {
+            throw new Error('Wallet address not found in callback')
+        }
+
         // Exchange code for access token
         const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
             method: 'POST',
@@ -63,8 +82,37 @@ export async function GET(request: NextRequest) {
         // Calculate score based on GitHub activity
         const githubScore = calculateGitHubScore(statsData)
 
-        // For now, redirect back to homepage with success message
-        // In production, you'd want to properly handle the wallet address state
+        // Update ZK credentials with GitHub data
+        const { data: updatedCredentials, error: updateError } = await supabase
+            .from('zk_credentials')
+            .upsert({
+                wallet_address: walletAddress.toLowerCase(),
+                github_score: githubScore,
+                github_username: githubUser.login,
+                github_data: JSON.stringify({
+                    totalCommits: statsData.totalCommits,
+                    publicRepos: statsData.publicRepos,
+                    languages: statsData.languages,
+                    connectedAt: new Date().toISOString()
+                }),
+                github_proofs: JSON.stringify([{
+                    hash: zkProofHash,
+                    username: githubUser.login,
+                    timestamp: new Date().toISOString()
+                }])
+            })
+            .select()
+            .single()
+
+        if (updateError) {
+            console.error('Failed to update GitHub credentials:', updateError)
+            // Still redirect but with error info
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=update_failed`
+            return NextResponse.redirect(errorUrl)
+        }
+
+        // Redirect back to homepage with success message
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
         const successUrl = `${baseUrl.replace(/\/$/, '')}/?github_connected=true&score=${githubScore}&username=${githubUser.login}`
 

@@ -303,6 +303,17 @@ function StepContent({
 function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: ZKCredentials, onUpdate: () => void, walletAddress: string }) {
     const [uploading, setUploading] = useState(false)
     const [file, setFile] = useState<File | null>(null)
+    const [selectedDegree, setSelectedDegree] = useState<string>('')
+    const [institution, setInstitution] = useState<string>('')
+
+    const degreeOptions = [
+        { value: 'high_school', label: 'High School Diploma', points: 50 },
+        { value: 'bachelors', label: 'Bachelor\'s Degree', points: 150 },
+        { value: 'masters', label: 'Master\'s Degree', points: 200 },
+        { value: 'phd', label: 'PhD/Doctorate', points: 250 },
+        { value: 'certification', label: 'Professional Certification', points: 100 },
+        { value: 'bootcamp', label: 'Coding Bootcamp', points: 75 }
+    ]
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = event.target.files?.[0]
@@ -313,38 +324,81 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
             return
         }
 
+        if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+            alert('File size must be less than 10MB')
+            return
+        }
+
         setFile(selectedFile)
     }
 
-    const generateZKProof = async () => {
-        if (!file) return
+    const submitEducationCredential = async () => {
+        if (!selectedDegree || !institution.trim()) {
+            alert('Please select a degree type and enter institution name')
+            return
+        }
+
+        if (!file) {
+            alert('Please upload your certificate/diploma')
+            return
+        }
+
         setUploading(true)
 
         try {
+            const selectedDegreeInfo = degreeOptions.find(d => d.value === selectedDegree)
+            const scoreAwarded = selectedDegreeInfo?.points || 0
+
             // For MVP, we'll simulate ZK proof generation
-            // In production, this would use zkPDF library
+            // In production, this would use zkPDF library for actual verification
             const formData = new FormData()
             formData.append('certificate', file)
-            formData.append('proofType', 'education')
+            formData.append('degreeType', selectedDegree)
+            formData.append('institution', institution)
+            formData.append('walletAddress', walletAddress)
 
             const response = await fetch('/api/zk-proofs/generate', {
                 method: 'POST',
-                headers: {
-                    'wallet-address': walletAddress
-                },
                 body: formData
             })
 
             if (response.ok) {
                 const result = await response.json()
-                alert(`✅ ZK Proof generated! Score: +${result.scoreAwarded} points`)
-                onUpdate()
+                
+                // Update ZK credentials with education data
+                const updateResponse = await fetch(`/api/zk-credentials/${walletAddress}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        education_score: scoreAwarded,
+                        has_degree: ['bachelors', 'masters', 'phd'].includes(selectedDegree),
+                        has_certification: ['certification', 'bootcamp'].includes(selectedDegree),
+                        education_proofs: JSON.stringify([{
+                            degreeType: selectedDegree,
+                            institution: institution,
+                            fileHash: result.fileHash,
+                            scoreAwarded: scoreAwarded,
+                            timestamp: new Date().toISOString()
+                        }])
+                    })
+                })
+
+                if (updateResponse.ok) {
+                    alert(`✅ Education credential verified! You earned ${scoreAwarded} reputation points.`)
+                    onUpdate()
+                    // Reset form
+                    setSelectedDegree('')
+                    setInstitution('')
+                    setFile(null)
+                } else {
+                    throw new Error('Failed to update credentials')
+                }
             } else {
                 throw new Error('Failed to generate proof')
             }
         } catch (error) {
-            console.error('ZK proof generation failed:', error)
-            alert('❌ Failed to generate ZK proof. Please try again.')
+            console.error('Education credential submission failed:', error)
+            alert('❌ Failed to submit education credential. Please try again.')
         }
 
         setUploading(false)
@@ -366,9 +420,39 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
             {!credentials.has_degree && !credentials.has_certification && (
                 <div className="space-y-4">
+                    {/* Degree Type Selection */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Select Degree Type:</label>
+                        <select
+                            value={selectedDegree}
+                            onChange={(e) => setSelectedDegree(e.target.value)}
+                            className="w-full pixel-border bg-background px-3 py-2 text-foreground"
+                        >
+                            <option value="">Choose your education level...</option>
+                            {degreeOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label} ({option.points} points)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Institution Name */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Institution Name:</label>
+                        <input
+                            type="text"
+                            value={institution}
+                            onChange={(e) => setInstitution(e.target.value)}
+                            placeholder="e.g., Stanford University, MIT, General Assembly..."
+                            className="w-full pixel-border bg-background px-3 py-2 text-foreground"
+                        />
+                    </div>
+
+                    {/* File Upload */}
                     <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
                         <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-medium mb-2">Upload Education Certificate</p>
+                        <p className="text-sm font-medium mb-2">Upload Certificate/Diploma</p>
                         <p className="text-xs text-muted-foreground mb-4">PDF files only, max 10MB</p>
                         <input
                             type="file"
@@ -387,14 +471,35 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                     </div>
 
                     {file && (
-                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                            <span className="text-sm font-medium">{file.name}</span>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                <span className="text-sm font-medium">{file.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </span>
+                            </div>
+                            
+                            {selectedDegree && institution && (
+                                <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                                    <div className="text-sm">
+                                        <strong>Ready to submit:</strong>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        {degreeOptions.find(d => d.value === selectedDegree)?.label} from {institution}
+                                    </div>
+                                    <div className="text-xs text-accent mt-1">
+                                        Will earn: {degreeOptions.find(d => d.value === selectedDegree)?.points} reputation points
+                                    </div>
+                                </div>
+                            )}
+
                             <PixelButton
                                 variant="accent"
-                                onClick={generateZKProof}
-                                disabled={uploading}
+                                onClick={submitEducationCredential}
+                                disabled={uploading || !selectedDegree || !institution}
+                                className="w-full"
                             >
-                                {uploading ? 'Generating Proof...' : 'Generate ZK Proof'}
+                                {uploading ? 'Verifying Credential...' : 'Submit & Verify Credential'}
                             </PixelButton>
                         </div>
                     )}
@@ -423,8 +528,8 @@ function GitHubStep({ credentials, onUpdate, walletAddress }: { credentials: ZKC
         setConnecting(true)
 
         try {
-            // Redirect to GitHub OAuth
-            window.location.href = '/api/auth/github'
+            // Redirect to GitHub OAuth with wallet address
+            window.location.href = `/api/auth/github?wallet=${encodeURIComponent(walletAddress)}`
         } catch (error) {
             console.error('GitHub OAuth failed:', error)
             setConnecting(false)

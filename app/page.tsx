@@ -55,6 +55,30 @@ export default function HomePage() {
     }
   }, [isConnected, address])
 
+  // Handle GitHub OAuth success
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const githubConnected = urlParams.get('github_connected')
+    const githubScore = urlParams.get('score')
+    const githubUsername = urlParams.get('username')
+    const githubError = urlParams.get('github_error')
+
+    if (githubConnected === 'true' && githubScore && githubUsername) {
+      // Show success message
+      alert(`🎉 GitHub connected successfully! You earned ${githubScore} reputation points from @${githubUsername}`)
+      // Refresh credentials to show updated score
+      if (isConnected && address) {
+        checkZKCredentials()
+      }
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (githubError) {
+      alert(`❌ GitHub connection failed: ${githubError}`)
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [isConnected, address])
+
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/stats')
