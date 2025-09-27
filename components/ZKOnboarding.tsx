@@ -319,20 +319,19 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
     const [proofDetails, setProofDetails] = useState<any>(null)
 
     const degreeOptions = [
-        { value: 'high_school', label: 'High School Diploma', points: 50 },
-        { value: 'bachelors', label: 'Bachelor\'s Degree', points: 150 },
-        { value: 'masters', label: 'Master\'s Degree', points: 200 },
-        { value: 'phd', label: 'PhD/Doctorate', points: 250 },
-        { value: 'certification', label: 'Professional Certification', points: 100 },
-        { value: 'bootcamp', label: 'Coding Bootcamp', points: 75 }
+        { value: 'highschool', label: 'High School Diploma', points: 50 },
+        { value: 'bachelors', label: 'Bachelor\'s Degree', points: 100 },
+        { value: 'masters', label: 'Master\'s Degree', points: 150 },
+        { value: 'phd', label: 'PhD/Doctorate', points: 200 },
+        { value: 'certification', label: 'Professional Certification', points: 75 }
     ]
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = event.target.files?.[0]
         if (!selectedFile) return
 
         if (selectedFile.type !== 'application/pdf') {
-            alert('Please upload a PDF file')
+            alert('Please upload a PDF file for zkPDF verification')
             return
         }
 
@@ -341,6 +340,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
             return
         }
 
+        console.log('📄 PDF file selected:', selectedFile.name)
         setFile(selectedFile)
     }
 
@@ -359,6 +359,12 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
         setZkProofStatus('parsing')
 
         try {
+            console.log('📄 Starting zkPDF upload with:')
+            console.log('- Degree Type:', selectedDegree)
+            console.log('- Institution:', institution)
+            console.log('- File:', file.name, file.size, 'bytes')
+            console.log('- Wallet:', walletAddress)
+
             // Create FormData for zkPDF processing
             const formData = new FormData()
             formData.append('certificate', file)

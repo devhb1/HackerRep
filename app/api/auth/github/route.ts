@@ -8,39 +8,59 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state')
 
     if (!code) {
-        // Get wallet address from request headers or query params
-        const walletAddress = request.headers.get('x-wallet-address') || request.nextUrl.searchParams.get('wallet')
+        // Get wallet address from query params
+        const walletAddress = request.nextUrl.searchParams.get('wallet')
 
         if (!walletAddress) {
-            return NextResponse.json({ error: 'Wallet address required' }, { status: 400 })
+            console.error('GitHub OAuth: No wallet address provided')
+            return NextResponse.json({
+                error: 'Wallet address required for GitHub connection',
+                message: 'Please make sure your wallet is connected before linking GitHub'
+            }, { status: 400 })
         }
+
+        console.log('🔗 Starting GitHub OAuth for wallet:', walletAddress)
 
         // Redirect to GitHub OAuth
         const clientId = process.env.GITHUB_CLIENT_ID
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+
         // Ensure no double slashes in redirect URI
-        const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/auth/github`
+        const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/auth/github?wallet=${encodeURIComponent(walletAddress)}`
         const scope = 'read:user user:email'
-        // Include wallet address in state for callback
+
+        // Include wallet address in both state and redirect URI for redundancy
         const stateParam = btoa(walletAddress + '_' + Date.now().toString()).replace(/[+/=]/g, '')
 
         const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${stateParam}`
 
-        // Store wallet address temporarily (in production, use Redis or database)
-        // For now, we'll pass it in the redirect URL
-        const redirectWithWallet = `${githubAuthUrl}&wallet=${encodeURIComponent(walletAddress)}`
-
-        return NextResponse.redirect(redirectWithWallet)
+        console.log('🚀 Redirecting to GitHub OAuth:', githubAuthUrl)
+        return NextResponse.redirect(githubAuthUrl)
     }
 
     // Handle OAuth callback
     try {
-        // Get wallet address from state or query params
-        const walletAddress = request.nextUrl.searchParams.get('wallet')
+        // Get wallet address from multiple possible sources
+        let walletAddress = request.nextUrl.searchParams.get('wallet') ||
+            request.nextUrl.searchParams.get('state')
+
+        // If state is encoded, decode it to extract wallet address
+        if (walletAddress && walletAddress.includes('_')) {
+            try {
+                const decoded = atob(walletAddress)
+                walletAddress = decoded.split('_')[0]
+            } catch (e) {
+                console.log('Failed to decode state, using as-is')
+            }
+        }
 
         if (!walletAddress) {
-            throw new Error('Wallet address not found in callback')
+            console.error('GitHub OAuth: Wallet address not found in callback')
+            console.log('Available params:', Object.fromEntries(request.nextUrl.searchParams.entries()))
+            throw new Error('Wallet address not found in callback - please try connecting GitHub again')
         }
+
+        console.log('🔗 GitHub OAuth callback for wallet:', walletAddress)
 
         // Exchange code for access token
         const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
