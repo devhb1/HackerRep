@@ -302,20 +302,14 @@ async function storeZKPDFProof(
         newTotalScore = proof.reputationScore + currentGithubScore + currentSocialScore
     } else if (proofType === 'github') {
         newTotalScore = currentEducationScore + proof.reputationScore + currentSocialScore
-    }    // Determine reputation tier based on new total score
-    let reputationTier: 'newcomer' | 'student' | 'developer' | 'senior-dev' | 'blockchain-expert' = 'newcomer'
-    if (newTotalScore >= 300) reputationTier = 'blockchain-expert'
-    else if (newTotalScore >= 200) reputationTier = 'senior-dev'
-    else if (newTotalScore >= 100) reputationTier = 'developer'
-    else if (newTotalScore >= 50) reputationTier = 'student'
+    }    // Don't calculate reputation tier manually - it's a generated column based on scores
 
     const updateData = {
         wallet_address: walletAddress.toLowerCase(),
         education_score: proofType === 'academic' ? proof.reputationScore : currentEducationScore,
         github_score: proofType === 'github' ? proof.reputationScore : currentGithubScore,
         social_score: currentSocialScore,
-        // Don't set total_base_score - it's a generated column
-        reputation_tier: reputationTier,
+        // Don't set total_base_score or reputation_tier - they're generated columns
         completed_onboarding: false, // Will be updated later when full onboarding is done
         has_degree: proofType === 'academic' ? true : (currentData?.has_degree || false),
         has_certification: proofType === 'academic' ? true : (currentData?.has_certification || false),

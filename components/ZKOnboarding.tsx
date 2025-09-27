@@ -288,14 +288,25 @@ export function ZKOnboarding() {
                             ✅ zkPDF Proofs Generated! Your base reputation is complete. Now build social reputation through peer connections and votes.
                         </span>
                     </div>
-                ) : credentialsCollectedNotProven ? (
+                ) : (credentials.github_username || credentials.has_degree || credentials.has_certification) ? (
                     <div className="space-y-3">
-                        <div className="flex items-center gap-2 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                            <CheckCircle className="h-5 w-5 text-purple-500" />
+                        <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-blue-500" />
                             <span className="text-sm">
-                                🎯 Both credentials collected! Generate zkPDF proofs to complete your base reputation.
+                                🚀 Ready to generate zkPDF proofs! You can generate proofs with your current credentials and add more later.
                             </span>
                         </div>
+                        
+                        {/* Show what credentials are available */}
+                        <div className="text-xs text-muted-foreground space-y-1">
+                            {credentials.github_username && (
+                                <div>✓ GitHub: {credentials.github_username} {credentials.github_score > 0 ? '(zkPDF proof generated)' : '(ready for zkPDF)'}</div>
+                            )}
+                            {(credentials.has_degree || credentials.has_certification) && (
+                                <div>✓ Academic: Credentials uploaded {credentials.education_score > 0 ? '(zkPDF proof generated)' : '(ready for zkPDF)'}</div>
+                            )}
+                        </div>
+
                         <PixelButton
                             variant="accent"
                             onClick={async () => {
@@ -303,7 +314,15 @@ export function ZKOnboarding() {
 
                                 setGeneratingReputation(true)
                                 try {
-                                    alert('🏆 ETHEREUM FOUNDATION zkPDF\n\nGenerating zero-knowledge proofs for:\n✓ Academic credentials (PDF verification)\n✓ GitHub contributions (OAuth verification)\n\nThis process preserves your privacy while proving qualifications.')
+                                    const hasGithub = credentials.github_username && credentials.github_score === 0
+                                    const hasAcademic = (credentials.has_degree || credentials.has_certification) && credentials.education_score === 0
+                                    
+                                    let proofMessage = '🏆 ETHEREUM FOUNDATION zkPDF\n\nGenerating zero-knowledge proofs for available credentials:\n'
+                                    if (hasGithub) proofMessage += '✓ GitHub contributions (OAuth verification)\n'
+                                    if (hasAcademic) proofMessage += '✓ Academic credentials (PDF re-upload required)\n'
+                                    proofMessage += '\nThis process preserves your privacy while proving qualifications.'
+                                    
+                                    alert(proofMessage)
 
                                     let results: string[] = []
 
@@ -399,9 +418,17 @@ export function ZKOnboarding() {
                                     // Refresh credentials to show updated scores
                                     await fetchCredentials()
 
-                                    const resultMessage = results.length > 0
+                                    let resultMessage = results.length > 0
                                         ? `🎯 zkPDF Proof Generation Results:\n\n${results.join('\n')}\n\n🏆 Your reputation is now verified through zero-knowledge proofs!`
                                         : '✅ zkPDF proofs generated successfully!\n\nYour reputation scores are now verified through zero-knowledge proofs.'
+
+                                    // Add encouragement to add more credentials
+                                    const hasMoreToAdd = !credentials.github_username || !(credentials.has_degree || credentials.has_certification)
+                                    if (hasMoreToAdd) {
+                                        resultMessage += '\n\n💡 Tip: You can add more credentials anytime to increase your zkPDF-verified reputation!'
+                                        if (!credentials.github_username) resultMessage += '\n• Connect GitHub for contribution verification'
+                                        if (!(credentials.has_degree || credentials.has_certification)) resultMessage += '\n• Upload academic certificates for education verification'
+                                    }
 
                                     alert(resultMessage)
                                 } catch (error) {
@@ -425,11 +452,23 @@ export function ZKOnboarding() {
                         </PixelButton>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-4">
-                        <AlertCircle className="h-5 w-5 text-yellow-500" />
-                        <span className="text-sm">
-                            📝 Complete your academic credentials and GitHub connection, then generate your ZK proof base reputation.
-                        </span>
+                    <div className="space-y-3 mb-4">
+                        <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-blue-500" />
+                            <span className="text-sm">
+                                � Start building your zkPDF-verified reputation! You can begin with any credential and add more later.
+                            </span>
+                        </div>
+                        
+                        {/* Quick Start Options */}
+                        <div className="text-xs text-muted-foreground p-3 bg-muted/50 rounded-lg">
+                            💡 <strong>Flexible zkPDF Options:</strong>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li><strong>GitHub First:</strong> Connect GitHub → Generate zkPDF proof → Add academic later</li>
+                                <li><strong>Academic First:</strong> Upload certificate → Generate zkPDF proof → Connect GitHub later</li>
+                                <li><strong>Both Together:</strong> Complete both credentials for maximum initial reputation</li>
+                            </ul>
+                        </div>
                     </div>
                 )}
             </Card>
