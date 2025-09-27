@@ -134,9 +134,39 @@ export async function GET(request: NextRequest) {
             console.error('❌ Failed to call zkPDF proof API')
         }
 
-        // Update ZK credentials with GitHub data (for backward compatibility)
+        // Update ZK credentials with GitHub data
         try {
             console.log('🔄 Attempting to update ZK credentials...')
+            
+            // First, ensure the zk_credentials record exists
+            const { data: existingCredentials, error: fetchError } = await supabase
+                .from('zk_credentials')
+                .select('*')
+                .eq('wallet_address', walletAddress.toLowerCase())
+                .single()
+
+            if (fetchError && fetchError.code === 'PGRST116') {
+                // Create new record if it doesn't exist
+                console.log('Creating new ZK credentials record...')
+                const { error: createError } = await supabase
+                    .from('zk_credentials')
+                    .insert({
+                        wallet_address: walletAddress.toLowerCase(),
+                        education_score: 0,
+                        github_score: 0,
+                        social_score: 0,
+                        completed_onboarding: false,
+                        has_degree: false,
+                        has_certification: false,
+                        github_username: null
+                    })
+                
+                if (createError) {
+                    console.error('Failed to create ZK credentials record:', createError)
+                }
+            }
+
+            // Now update with GitHub data
             const { data: updatedCredentials, error: updateError } = await supabase
                 .from('zk_credentials')
                 .upsert({
@@ -163,26 +193,19 @@ export async function GET(request: NextRequest) {
 
             if (updateError) {
                 console.error('Failed to update GitHub credentials:', updateError)
-                // Check if it's a table/column issue
-                if (updateError.code === 'PGRST116' || updateError.message.includes('relation') || updateError.message.includes('column')) {
-                    console.log('Database schema issue detected, creating fallback record...')
-                    // Try to create a basic record without complex fields
-                    const { error: fallbackError } = await supabase
-                        .from('zk_credentials')
-                        .upsert({
-                            wallet_address: walletAddress.toLowerCase(),
-                            github_score: githubScore,
-                            github_username: githubUser.login
-                        })
-                    
-                    if (fallbackError) {
-                        console.error('Fallback update also failed:', fallbackError)
-                        // Don't throw error, just log and continue
-                        console.log('⚠️ Database update failed, but continuing with GitHub connection...')
-                    }
+                // Try a simpler update
+                const { error: simpleError } = await supabase
+                    .from('zk_credentials')
+                    .upsert({
+                        wallet_address: walletAddress.toLowerCase(),
+                        github_score: githubScore,
+                        github_username: githubUser.login
+                    })
+                
+                if (simpleError) {
+                    console.error('Simple update also failed:', simpleError)
                 } else {
-                    // Don't throw error, just log and continue
-                    console.log('⚠️ Database update failed, but continuing with GitHub connection...')
+                    console.log('✅ Simple GitHub credentials update successful')
                 }
             } else {
                 console.log('✅ ZK credentials updated successfully')

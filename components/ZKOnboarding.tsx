@@ -75,11 +75,22 @@ export function ZKOnboarding() {
         }
     }, [address, isConnected])
 
+    // Refresh credentials when GitHub connection is detected
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search)
+        const githubConnected = urlParams.get('github_connected')
+        if (githubConnected === 'true' && isConnected && address) {
+            console.log('🔄 GitHub connection detected, refreshing credentials...')
+            fetchCredentials()
+        }
+    }, [isConnected, address])
+
     const fetchCredentials = async () => {
         try {
             const response = await fetch(`/api/zk-credentials/${address}`)
             if (response.ok) {
                 const data = await response.json()
+                console.log('📊 Fetched credentials:', data.credentials)
                 setCredentials(data.credentials)
                 
                 // Auto-expand the next step after GitHub connection
