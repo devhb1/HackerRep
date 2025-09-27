@@ -39,6 +39,7 @@ export async function GET(
 
         if (credentialsError && credentialsError.code === 'PGRST116') {
             // No ZK credentials exist, create default record
+            console.log('Creating new ZK credentials for wallet:', walletAddress)
             const { data: newCredentials, error: createError } = await supabase
                 .from('zk_credentials')
                 .insert({
@@ -58,13 +59,38 @@ export async function GET(
 
             if (createError) {
                 console.error('Failed to create ZK credentials:', createError)
-                return NextResponse.json(
-                    { error: 'Failed to create credentials record' },
-                    { status: 500 }
-                )
+                // Check if it's a table/column issue
+                if (createError.code === 'PGRST116' || createError.message.includes('relation') || createError.message.includes('column')) {
+                    console.log('Database schema issue detected, creating fallback record...')
+                    // Try to create a basic record without complex fields
+                    const { data: fallbackCredentials, error: fallbackError } = await supabase
+                        .from('zk_credentials')
+                        .insert({
+                            wallet_address: walletAddress.toLowerCase(),
+                            education_score: 0,
+                            github_score: 0,
+                            social_score: 0
+                        })
+                        .select()
+                        .single()
+                    
+                    if (fallbackError) {
+                        console.error('Fallback creation also failed:', fallbackError)
+                        return NextResponse.json(
+                            { error: 'Database connection issue - please try again later' },
+                            { status: 500 }
+                        )
+                    }
+                    credentials = fallbackCredentials
+                } else {
+                    return NextResponse.json(
+                        { error: 'Failed to create credentials record' },
+                        { status: 500 }
+                    )
+                }
+            } else {
+                credentials = newCredentials
             }
-
-            credentials = newCredentials
         } else if (credentialsError) {
             console.error('Failed to fetch ZK credentials:', credentialsError)
             return NextResponse.json(

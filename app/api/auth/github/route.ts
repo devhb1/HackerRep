@@ -13,16 +13,22 @@ export async function GET(request: NextRequest) {
 
         if (!walletAddress) {
             console.error('GitHub OAuth: No wallet address provided')
-            return NextResponse.json({
-                error: 'Wallet address required for GitHub connection',
-                message: 'Please make sure your wallet is connected before linking GitHub'
-            }, { status: 400 })
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=${encodeURIComponent('Wallet address required - please connect your wallet first')}`
+            return NextResponse.redirect(errorUrl)
         }
 
         console.log('🔗 Starting GitHub OAuth for wallet:', walletAddress)
 
-        // Redirect to GitHub OAuth
+        // Check if GitHub OAuth is properly configured
         const clientId = process.env.GITHUB_CLIENT_ID
+        if (!clientId) {
+            console.error('GitHub OAuth: GITHUB_CLIENT_ID not configured')
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=${encodeURIComponent('GitHub OAuth not configured - please contact support')}`
+            return NextResponse.redirect(errorUrl)
+        }
+
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
 
         // Ensure no double slashes in redirect URI
@@ -57,7 +63,9 @@ export async function GET(request: NextRequest) {
         if (!walletAddress) {
             console.error('GitHub OAuth: Wallet address not found in callback')
             console.log('Available params:', Object.fromEntries(request.nextUrl.searchParams.entries()))
-            throw new Error('Wallet address not found in callback - please try connecting GitHub again')
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=${encodeURIComponent('Wallet address not found in callback - please try connecting GitHub again')}`
+            return NextResponse.redirect(errorUrl)
         }
 
         console.log('🔗 GitHub OAuth callback for wallet:', walletAddress)

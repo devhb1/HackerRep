@@ -152,7 +152,18 @@ export function ZKOnboarding() {
         return 'newcomer'
     }
 
-    if (!isConnected || loading) {
+    if (!isConnected) {
+        return (
+            <Card className="p-6">
+                <div className="flex items-center justify-center">
+                    <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                    <span className="ml-2">Please connect your wallet to access ZK Registry</span>
+                </div>
+            </Card>
+        )
+    }
+
+    if (loading) {
         return (
             <Card className="p-6">
                 <div className="flex items-center justify-center">
@@ -405,14 +416,24 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
     }
 
     const submitEducationCredential = async () => {
-        // Validate inputs
-        if (!selectedDegree || !institution.trim()) {
-            alert('Please select a degree type and enter institution name')
+        // Validate inputs with better error messages
+        if (!selectedDegree) {
+            alert('❌ Please select a degree type from the dropdown')
+            return
+        }
+
+        if (!institution.trim()) {
+            alert('❌ Please enter your institution name')
+            return
+        }
+
+        if (institution.trim().length < 3) {
+            alert('❌ Institution name must be at least 3 characters long')
             return
         }
 
         if (!file) {
-            alert('Please upload your certificate/diploma')
+            alert('❌ Please upload your certificate/diploma PDF file')
             return
         }
 
@@ -588,6 +609,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                             onChange={(e) => setSelectedDegree(e.target.value)}
                             className="w-full pixel-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                             style={{ maxHeight: '200px', overflowY: 'auto' }}
+                            required
                         >
                             <option value="">Choose your education level...</option>
                             {degreeOptions.map((option) => (
@@ -607,6 +629,8 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                             onChange={(e) => setInstitution(e.target.value)}
                             placeholder="e.g., Stanford University, MIT, General Assembly..."
                             className="w-full pixel-border bg-background px-3 py-2 text-foreground"
+                            required
+                            minLength={3}
                         />
                     </div>
 
@@ -695,10 +719,12 @@ function GitHubStep({ credentials, onUpdate, walletAddress }: { credentials: ZKC
         setConnecting(true)
 
         try {
+            console.log('🔗 Starting GitHub OAuth for wallet:', walletAddress)
             // Redirect to GitHub OAuth with wallet address
             window.location.href = `/api/auth/github?wallet=${encodeURIComponent(walletAddress)}`
         } catch (error) {
             console.error('GitHub OAuth failed:', error)
+            alert('❌ Failed to start GitHub connection. Please try again.')
             setConnecting(false)
         }
     }

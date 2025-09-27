@@ -74,7 +74,8 @@ export default function HomePage() {
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname)
     } else if (githubError) {
-      alert(`❌ GitHub connection failed: ${githubError}`)
+      const decodedError = decodeURIComponent(githubError)
+      alert(`❌ GitHub connection failed: ${decodedError}\n\nPlease try again or contact support if the issue persists.`)
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname)
     }

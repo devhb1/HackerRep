@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         // Validate file type
         if (certificate.type !== 'application/pdf') {
             return NextResponse.json(
-                { error: 'Only PDF files are allowed for zkPDF verification' },
+                { error: 'Only PDF files are allowed for zkPDF verification', details: `Received file type: ${certificate.type}` },
                 { status: 400 }
             )
         }
@@ -28,7 +28,22 @@ export async function POST(request: NextRequest) {
         // Validate file size (10MB limit)
         if (certificate.size > 10 * 1024 * 1024) {
             return NextResponse.json(
-                { error: 'File size must be less than 10MB' },
+                { error: 'File size must be less than 10MB', details: `Received file size: ${(certificate.size / 1024 / 1024).toFixed(2)}MB` },
+                { status: 400 }
+            )
+        }
+
+        // Validate required fields
+        if (!walletAddress || walletAddress.length !== 42 || !walletAddress.startsWith('0x')) {
+            return NextResponse.json(
+                { error: 'Invalid wallet address format' },
+                { status: 400 }
+            )
+        }
+
+        if (!degreeType || !institution || institution.trim().length < 3) {
+            return NextResponse.json(
+                { error: 'Invalid degree type or institution name' },
                 { status: 400 }
             )
         }
