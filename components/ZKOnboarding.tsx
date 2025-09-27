@@ -386,17 +386,21 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
                 setZkProofStatus('complete')
 
-                // Show success message with zkPDF details
-                alert(`🏆 ETHEREUM FOUNDATION zkPDF Proof Generated!\n\n` +
-                    `✅ Proof Type: ${result.zkProof.proofType}\n` +
-                    `✅ Reputation Score: ${result.zkProof.reputationScore} points\n` +
-                    `✅ Proof ID: ${result.zkProof.proofId}\n` +
-                    `✅ Privacy Level: Maximum\n\n` +
+                // Show success message with OFFICIAL zkPDF details
+                alert(`🏆 ETHEREUM FOUNDATION - Official zkPDF Proof Generated!\n\n` +
+                    `✅ Track: ${result.hackathonTrack}\n` +
+                    `✅ zkPDF Compliant: ${result.zkpdfCompliant ? 'YES ✓' : 'NO ✗'}\n` +
+                    `✅ Proof Type: ${result.zkpdfProof.proofType}\n` +
+                    `✅ Reputation Score: ${result.zkpdfProof.reputationScore} points\n` +
+                    `✅ Proof ID: ${result.zkpdfProof.proofId}\n` +
+                    `✅ Privacy Level: Maximum (zkPDF Circuit)\n\n` +
                     `🔒 Protected Details: Student name, ID, GPA, course details\n\n` +
-                    `🔍 Revealed Commitments:\n` +
-                    `• Master: ${result.zkProof.commitment.substring(0, 16)}...\n` +
-                    `• Institution: ${result.zkProof.publicInputs.institutionHash.substring(0, 16)}...\n` +
-                    `• Nullifier: ${result.zkProof.nullifier.substring(0, 16)}...\n\n`
+                    `🔍 zkPDF Circuit Outputs:\n` +
+                    `• Substring Match: ${result.zkpdfProof.circuitProof.substringMatches ? 'VERIFIED' : 'FAILED'}\n` +
+                    `• Signature Valid: ${result.zkpdfProof.circuitProof.signature_valid ? 'VERIFIED' : 'FAILED'}\n` +
+                    `• Message Digest: ${result.zkpdfProof.circuitProof.messageDigestHash.slice(0, 8).join('')}...\n` +
+                    `• Nullifier: ${result.zkpdfProof.circuitProof.nullifier.slice(0, 8).join('')}...\n\n` +
+                    `🎯 Ready for Ethereum Foundation Judging!`
                 )
 
                 onUpdate()

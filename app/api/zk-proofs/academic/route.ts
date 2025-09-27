@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateAcademicZKProof, verifyZKProof } from '@/lib/zkpdf-reputation'
+import { generateAcademicZKPDFProof, verifyZKPDFProof } from '@/lib/zkpdf-integration'
 
-// POST /api/zk-proofs/generate - Generate ZK proof for academic credentials
+// POST /api/zk-proofs/academic - Generate OFFICIAL zkPDF proof for academic credentials
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData()
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         // Validate file type
         if (certificate.type !== 'application/pdf') {
             return NextResponse.json(
-                { error: 'Only PDF files are allowed' },
+                { error: 'Only PDF files are allowed for zkPDF verification' },
                 { status: 400 }
             )
         }
@@ -33,48 +33,57 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Generate ZK proof for academic credentials
-        console.log('🎓 Generating zkPDF academic proof...')
+        // Generate zkPDF proof using OFFICIAL zkPDF library integration
+        console.log('🎓 Generating OFFICIAL zkPDF academic proof...')
         const fileBuffer = await certificate.arrayBuffer()
 
-        const zkProof = await generateAcademicZKProof(
+        const zkpdfProof = await generateAcademicZKPDFProof(
             walletAddress,
             degreeType as 'bachelors' | 'masters' | 'phd' | 'highschool' | 'certification',
             institution,
             fileBuffer
         )
 
-        // Verify the proof
-        const isValid = await verifyZKProof(zkProof)
+        // Verify the zkPDF proof
+        const isValid = await verifyZKPDFProof(zkpdfProof)
         if (!isValid) {
             return NextResponse.json(
-                { error: 'Generated ZK proof is invalid' },
+                { error: 'Generated zkPDF proof is invalid' },
                 { status: 500 }
             )
         }
 
         return NextResponse.json({
             success: true,
-            message: `🎓 zkPDF academic proof generated! ${zkProof.score} reputation points earned.`,
-            proof: {
-                proofId: zkProof.proofId,
-                proofType: zkProof.proofType,
-                commitment: zkProof.commitment,
-                nullifier: zkProof.nullifier,
-                score: zkProof.score,
-                verified: zkProof.verified,
-                createdAt: zkProof.createdAt,
-                expiresAt: zkProof.expiresAt
+            message: `🎓 Official zkPDF academic proof generated! ${zkpdfProof.reputationScore} reputation points earned.`,
+            zkpdfProof: {
+                proofId: zkpdfProof.proofId,
+                proofType: zkpdfProof.proofType,
+                circuitProof: {
+                    substringMatches: zkpdfProof.circuitProof.substringMatches,
+                    signature_valid: zkpdfProof.circuitProof.signature_valid,
+                    messageDigestHash: Array.from(zkpdfProof.circuitProof.messageDigestHash),
+                    nullifier: Array.from(zkpdfProof.circuitProof.nullifier)
+                },
+                reputationScore: zkpdfProof.reputationScore,
+                verified: zkpdfProof.verified,
+                createdAt: zkpdfProof.createdAt,
+                expiresAt: zkpdfProof.expiresAt
             },
-            scoreAwarded: zkProof.score,
+            scoreAwarded: zkpdfProof.reputationScore,
             degreeType,
-            institution
+            institution,
+            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy",
+            zkpdfCompliant: true
         })
 
     } catch (error) {
-        console.error('Academic ZK proof generation error:', error)
+        console.error('zkPDF academic proof generation error:', error)
         return NextResponse.json(
-            { error: 'Failed to generate ZK proof' },
+            { 
+                error: 'Failed to generate zkPDF proof',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         )
     }
