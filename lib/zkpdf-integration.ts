@@ -278,9 +278,37 @@ async function storeZKPDFProof(
     const scoreField = proofType === 'academic' ? 'education_score' : 'github_score'
     const proofsField = proofType === 'academic' ? 'education_proofs' : 'github_proofs'
 
+    // First get current scores to calculate new total
+    const { data: currentData } = await supabase
+        .from('zk_credentials')
+        .select('education_score, github_score, social_score')
+        .eq('wallet_address', walletAddress.toLowerCase())
+        .single()
+
+    const currentEducationScore = currentData?.education_score || 0
+    const currentGithubScore = currentData?.github_score || 0
+    const currentSocialScore = currentData?.social_score || 0
+
+    // Calculate new total based on which score we're updating
+    let newTotalScore = currentEducationScore + currentGithubScore + currentSocialScore
+    if (proofType === 'academic') {
+        newTotalScore = proof.reputationScore + currentGithubScore + currentSocialScore
+    } else if (proofType === 'github') {
+        newTotalScore = currentEducationScore + proof.reputationScore + currentSocialScore
+    }
+
+    // Determine reputation tier based on new total score
+    let reputationTier: 'newcomer' | 'student' | 'developer' | 'senior-dev' | 'blockchain-expert' = 'newcomer'
+    if (newTotalScore >= 300) reputationTier = 'blockchain-expert'
+    else if (newTotalScore >= 200) reputationTier = 'senior-dev'
+    else if (newTotalScore >= 100) reputationTier = 'developer'
+    else if (newTotalScore >= 50) reputationTier = 'student'
+
     const updateData = {
         wallet_address: walletAddress.toLowerCase(),
         [scoreField]: proof.reputationScore,
+        total_base_score: newTotalScore,
+        reputation_tier: reputationTier,
         [proofsField]: JSON.stringify([{
             proofId: proof.proofId,
             proofType,
@@ -295,7 +323,7 @@ async function storeZKPDFProof(
                 signature_valid: proof.circuitProof.signature_valid
             }
         }]),
-        last_updated: new Date().toISOString()
+        updated_at: new Date().toISOString()
     }
 
     const { error } = await supabase

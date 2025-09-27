@@ -103,55 +103,29 @@ export async function GET(request: NextRequest) {
         // Get GitHub stats
         const statsData = await getGitHubStats(githubUser.login, tokenData.access_token)
 
-        // 🏆 ETHEREUM FOUNDATION: Generate zkPDF-based ZK proof for GitHub credentials
-        console.log('🏆 Generating GitHub zkPDF proof for:', githubUser.login)
+        // 🏆 ETHEREUM FOUNDATION: Store GitHub connection for future zkPDF proof generation
+        console.log('🔗 GitHub account connected for:', githubUser.login)
+        console.log('📊 GitHub stats collected, ready for zkPDF proof generation')
 
-        // Use GitHub zkPDF API to generate proof
-        const zkProofResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-proofs/github-clean`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                walletAddress: walletAddress,
-                githubUsername: githubUser.login,
-                githubStats: statsData
-            })
-        })
-
-        let zkProofResult
-        let githubScore = calculateGitHubScore(statsData) // fallback score
-
-        if (zkProofResponse.ok) {
-            zkProofResult = await zkProofResponse.json()
-            if (zkProofResult.success) {
-                githubScore = zkProofResult.scoreAwarded
-                console.log('✅ GitHub zkPDF proof generated successfully!')
-            } else {
-                console.error('❌ GitHub zkPDF proof generation failed:', zkProofResult.error)
-            }
-        } else {
-            console.error('❌ Failed to call zkPDF proof API')
-        }
-
-        // Update ZK credentials with GitHub data - SIMPLIFIED APPROACH
+        // Store GitHub connection data WITHOUT scores (scores generated later via zkPDF button)
         try {
-            console.log('🔄 Updating ZK credentials with GitHub data...')
+            console.log('🔄 Storing GitHub connection data...')
             console.log('Wallet:', walletAddress.toLowerCase())
             console.log('GitHub username:', githubUser.login)
-            console.log('GitHub score:', githubScore)
-            
-            // Simple direct update - this should work
+
+            // Only store connection info, NO SCORES YET
             const { data: updatedCredentials, error: updateError } = await supabase
                 .from('zk_credentials')
                 .update({
-                    github_score: githubScore,
                     github_username: githubUser.login,
                     github_data: JSON.stringify({
                         totalCommits: statsData.totalCommits,
                         publicRepos: statsData.publicRepos,
                         languages: statsData.languages,
-                        connectedAt: new Date().toISOString()
+                        followers: githubUser.followers || 0,
+                        accountCreated: githubUser.created_at,
+                        connectedAt: new Date().toISOString(),
+                        zkProofGenerated: false // Flag to track if zkPDF proof generated
                     }),
                     updated_at: new Date().toISOString()
                 })
@@ -161,7 +135,7 @@ export async function GET(request: NextRequest) {
 
             if (updateError) {
                 console.error('❌ Failed to update GitHub credentials:', updateError)
-                
+
                 // Try creating a new record if update fails
                 console.log('🔄 Trying to create new record...')
                 const { data: newCredentials, error: createError } = await supabase
@@ -169,14 +143,17 @@ export async function GET(request: NextRequest) {
                     .insert({
                         wallet_address: walletAddress.toLowerCase(),
                         education_score: 0,
-                        github_score: githubScore,
+                        github_score: 0, // No score until zkPDF proof generated
                         social_score: 0,
                         github_username: githubUser.login,
                         github_data: JSON.stringify({
                             totalCommits: statsData.totalCommits,
                             publicRepos: statsData.publicRepos,
                             languages: statsData.languages,
-                            connectedAt: new Date().toISOString()
+                            followers: githubUser.followers || 0,
+                            accountCreated: githubUser.created_at,
+                            connectedAt: new Date().toISOString(),
+                            zkProofGenerated: false
                         }),
                         completed_onboarding: false,
                         has_degree: false,
@@ -184,14 +161,14 @@ export async function GET(request: NextRequest) {
                     })
                     .select()
                     .single()
-                
+
                 if (createError) {
                     console.error('❌ Failed to create new record:', createError)
                 } else {
-                    console.log('✅ Created new ZK credentials record with GitHub data')
+                    console.log('✅ Created new ZK credentials record with GitHub connection')
                 }
             } else {
-                console.log('✅ Successfully updated ZK credentials with GitHub data')
+                console.log('✅ Successfully stored GitHub connection data')
                 console.log('Updated credentials:', updatedCredentials)
             }
         } catch (dbError) {
@@ -200,9 +177,9 @@ export async function GET(request: NextRequest) {
             console.error('Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing')
         }
 
-        // Redirect back to homepage with success message and refresh credentials
+        // Redirect back to homepage with connection success message (no score yet)
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
-        const successUrl = `${baseUrl.replace(/\/$/, '')}/?github_connected=true&score=${githubScore}&username=${githubUser.login}&refresh=true`
+        const successUrl = `${baseUrl.replace(/\/$/, '')}/?github_connected=true&username=${githubUser.login}&zkproof_pending=true`
 
         return NextResponse.redirect(successUrl)
 

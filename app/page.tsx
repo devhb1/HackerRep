@@ -64,10 +64,15 @@ export default function HomePage() {
     const githubUsername = urlParams.get('username')
     const githubError = urlParams.get('github_error')
 
-    if (githubConnected === 'true' && githubScore && githubUsername) {
-      // Show success message
-      alert(`🎉 GitHub connected successfully! You earned ${githubScore} reputation points from @${githubUsername}`)
-      // Refresh credentials to show updated score
+    if (githubConnected === 'true' && githubUsername) {
+      // Show connection success message (no score until zkPDF proof generated)
+      const zkProofPending = urlParams.get('zkproof_pending')
+      if (zkProofPending === 'true') {
+        alert(`🔗 GitHub connected successfully!\n\n@${githubUsername} is now linked to your account.\n\n⚠️ No reputation points awarded yet - you need to generate zkPDF proofs for both academic and GitHub credentials.`)
+      } else {
+        alert(`🎉 GitHub connected successfully!\n\n@${githubUsername} is ready for zkPDF proof generation.`)
+      }
+      // Refresh credentials to show GitHub connection
       if (isConnected && address) {
         checkZKCredentials()
       }

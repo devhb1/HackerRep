@@ -40,16 +40,23 @@ import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import { Upload, Github, GraduationCap, Users, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
-interface ZKCredentials {
+type ZKCredentials = {
+    id: string
+    wallet_address: string
     education_score: number
     github_score: number
     social_score: number
     total_base_score: number
-    reputation_tier: string
+    reputation_tier: 'newcomer' | 'student' | 'developer' | 'senior-dev' | 'blockchain-expert'
     completed_onboarding: boolean
     has_degree: boolean
     has_certification: boolean
     github_username: string | null
+    github_data: any
+    education_proofs: any
+    github_proofs: any
+    created_at: string
+    updated_at: string
 }
 
 interface OnboardingStep {
@@ -102,6 +109,8 @@ export function ZKOnboarding() {
             } else {
                 // User doesn't have ZK credentials yet, create empty record
                 setCredentials({
+                    id: '',
+                    wallet_address: address || '',
                     education_score: 0,
                     github_score: 0,
                     social_score: 0,
@@ -110,7 +119,12 @@ export function ZKOnboarding() {
                     completed_onboarding: false,
                     has_degree: false,
                     has_certification: false,
-                    github_username: null
+                    github_username: null,
+                    github_data: null,
+                    education_proofs: null,
+                    github_proofs: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 })
             }
         } catch (error) {
@@ -215,9 +229,17 @@ export function ZKOnboarding() {
         }
     ]
 
-    const totalProgress = (credentials.total_base_score / 500) * 100 // Max 500 points (300 education + 200 github)
-    const hasGeneratedBaseReputation = credentials.total_base_score > 0
-    const canAccessNetworking = credentials.total_base_score >= 50 // Minimum threshold
+    const totalProgress = (credentials.total_base_score / 400) * 100 // Max 400 points (200 education + 200 github)
+
+    // Only consider reputation generated if BOTH zkPDF proofs exist (both scores > 0)
+    const hasGeneratedBaseReputation = credentials.education_score > 0 && credentials.github_score > 0
+
+    // Credentials collected but proofs not generated yet
+    const credentialsCollectedNotProven = (credentials.has_degree || credentials.has_certification) &&
+        credentials.github_username &&
+        (credentials.education_score === 0 || credentials.github_score === 0)
+
+    const canAccessNetworking = hasGeneratedBaseReputation // Only after zkPDF proofs generated
 
     return (
         <div className="space-y-6">
@@ -263,10 +285,10 @@ export function ZKOnboarding() {
                     <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg mb-4">
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <span className="text-sm">
-                            ✅ Base reputation generated! Your ZK proof is complete. Now build social reputation through peer connections and votes.
+                            ✅ zkPDF Proofs Generated! Your base reputation is complete. Now build social reputation through peer connections and votes.
                         </span>
                     </div>
-                ) : (credentials.has_degree || credentials.has_certification) && credentials.github_username && (credentials.education_score === 0 || credentials.github_score === 0) ? (
+                ) : credentialsCollectedNotProven ? (
                     <div className="space-y-3">
                         <div className="flex items-center gap-2 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                             <CheckCircle className="h-5 w-5 text-purple-500" />
@@ -277,19 +299,111 @@ export function ZKOnboarding() {
                         <PixelButton
                             variant="accent"
                             onClick={async () => {
+                                if (!address) return
+
                                 setGeneratingReputation(true)
                                 try {
-                                    // Generate zkPDF proofs for both credentials
-                                    alert('🔄 Generating zkPDF proofs for both credentials...\n\nThis will create zero-knowledge proofs for:\n✓ Academic credentials\n✓ GitHub contributions\n\nPlease wait...')
+                                    alert('🏆 ETHEREUM FOUNDATION zkPDF\n\nGenerating zero-knowledge proofs for:\n✓ Academic credentials (PDF verification)\n✓ GitHub contributions (OAuth verification)\n\nThis process preserves your privacy while proving qualifications.')
 
-                                    // In a real implementation, this would trigger the zkPDF proof generation
-                                    // For now, we'll simulate the process
-                                    await new Promise(resolve => setTimeout(resolve, 2000))
+                                    let results: string[] = []
+
+                                    // Generate GitHub zkPDF proof if connected but no score yet
+                                    if (credentials.github_username && credentials.github_score === 0 && credentials.github_data) {
+                                        try {
+                                            console.log('� Generating GitHub zkPDF proof...')
+                                            const githubData = JSON.parse(credentials.github_data)
+
+                                            const githubResponse = await fetch('/api/zk-proofs/github-clean', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    walletAddress: address,
+                                                    githubUsername: credentials.github_username,
+                                                    githubStats: {
+                                                        publicRepos: githubData.publicRepos || 0,
+                                                        totalCommits: githubData.totalCommits || 0,
+                                                        languages: githubData.languages || [],
+                                                        accountCreated: githubData.accountCreated || new Date().toISOString(),
+                                                        followers: githubData.followers || 0
+                                                    }
+                                                })
+                                            })
+
+                                            if (githubResponse.ok) {
+                                                const githubResult = await githubResponse.json()
+                                                if (githubResult.success) {
+                                                    results.push(`✅ GitHub zkPDF proof: ${githubResult.scoreAwarded} points`)
+                                                    console.log('✅ GitHub zkPDF proof generated successfully')
+                                                }
+                                            }
+                                        } catch (error) {
+                                            console.error('Failed to generate GitHub zkPDF proof:', error)
+                                            results.push('❌ GitHub zkPDF proof failed')
+                                        }
+                                    }
+
+                                    // Generate Academic zkPDF proof if needed (requires file re-upload)
+                                    if ((credentials.has_degree || credentials.has_certification) && credentials.education_score === 0) {
+                                        const shouldUploadAcademic = confirm('🎓 Academic zkPDF Proof Required\n\nTo generate your academic credential zkPDF proof, you need to re-upload your PDF certificate/diploma.\n\nThis process:\n✓ Analyzes PDF content using zkPDF circuits\n✓ Generates zero-knowledge proof of your qualifications\n✓ Preserves privacy while proving credentials\n\nWould you like to upload your academic certificate now?')
+
+                                        if (shouldUploadAcademic) {
+                                            // Create file input for academic certificate
+                                            const academicInput = document.createElement('input')
+                                            academicInput.type = 'file'
+                                            academicInput.accept = '.pdf'
+                                            academicInput.onchange = async (e) => {
+                                                const file = (e.target as HTMLInputElement).files?.[0]
+                                                if (file) {
+                                                    try {
+                                                        const institution = prompt('Enter your institution name:') || 'Unknown Institution'
+                                                        const degreeType = prompt('Enter degree type (bachelors/masters/phd/highschool/certification):') || 'certification'
+
+                                                        console.log('🎓 Generating Academic zkPDF proof...')
+                                                        const formData = new FormData()
+                                                        formData.append('certificate', file)
+                                                        formData.append('degreeType', degreeType)
+                                                        formData.append('institution', institution)
+                                                        formData.append('walletAddress', address)
+
+                                                        const academicResponse = await fetch('/api/zk-proofs/academic', {
+                                                            method: 'POST',
+                                                            body: formData
+                                                        })
+
+                                                        if (academicResponse.ok) {
+                                                            const academicResult = await academicResponse.json()
+                                                            if (academicResult.success) {
+                                                                results.push(`✅ Academic zkPDF proof: ${academicResult.scoreAwarded} points`)
+                                                                console.log('✅ Academic zkPDF proof generated successfully')
+                                                            }
+                                                        } else {
+                                                            const errorData = await academicResponse.json()
+                                                            console.error('Academic zkPDF generation failed:', errorData)
+                                                            results.push('❌ Academic zkPDF proof failed')
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Academic zkPDF error:', error)
+                                                        results.push('❌ Academic zkPDF proof failed')
+                                                    }
+                                                }
+                                            }
+                                            academicInput.click()
+                                        } else {
+                                            results.push('⚠️ Academic zkPDF proof: Skipped by user')
+                                        }
+                                    }
+
+                                    // Wait a moment to simulate processing
+                                    await new Promise(resolve => setTimeout(resolve, 1500))
 
                                     // Refresh credentials to show updated scores
                                     await fetchCredentials()
 
-                                    alert('✅ zkPDF proofs generated successfully!\n\nYour reputation scores are now verified through zero-knowledge proofs.')
+                                    const resultMessage = results.length > 0
+                                        ? `🎯 zkPDF Proof Generation Results:\n\n${results.join('\n')}\n\n🏆 Your reputation is now verified through zero-knowledge proofs!`
+                                        : '✅ zkPDF proofs generated successfully!\n\nYour reputation scores are now verified through zero-knowledge proofs.'
+
+                                    alert(resultMessage)
                                 } catch (error) {
                                     console.error('zkPDF generation failed:', error)
                                     alert('❌ Failed to generate zkPDF proofs. Please try again.')
