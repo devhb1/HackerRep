@@ -37,13 +37,13 @@ export interface ZKPDFReputationProof {
     proofId: string
     walletAddress: string
     proofType: 'academic' | 'github'
-    
+
     // zkPDF Circuit Outputs (official format)
     circuitProof: ZKPDFCircuitOutput
-    
+
     // Public reputation score (derived from ZK proof)
     reputationScore: number
-    
+
     // Metadata
     createdAt: string
     expiresAt: string
@@ -60,21 +60,21 @@ export async function generateAcademicZKPDFProof(
     institution: string,
     pdfBuffer: ArrayBuffer
 ): Promise<ZKPDFReputationProof> {
-    
+
     console.log(`🎓 Generating official zkPDF proof for ${degreeType} certificate...`)
-    
+
     const pdfBytes = new Uint8Array(pdfBuffer)
-    
+
     // Academic reputation scoring (same as before)
     const scoreMap = {
         'highschool': 50,
-        'bachelors': 100, 
+        'bachelors': 100,
         'masters': 150,
         'phd': 200,
         'certification': 75
     }
     const reputationScore = scoreMap[degreeType]
-    
+
     // Create zkPDF circuit input for degree verification
     const circuitInput: ZKPDFCircuitInput = {
         pdf_bytes: pdfBytes,
@@ -82,13 +82,13 @@ export async function generateAcademicZKPDFProof(
         offset: 0,
         substring: degreeType.toUpperCase() // Look for degree type in PDF
     }
-    
+
     try {
         // Generate ZK proof using zkPDF circuit (official API call)
         const circuitProof = await callZKPDFCircuit(circuitInput, 'academic')
-        
+
         const proofId = `zkpdf_academic_${Date.now()}_${generateRandomHex(8)}`
-        
+
         const proof: ZKPDFReputationProof = {
             proofId,
             walletAddress: walletAddress.toLowerCase(),
@@ -99,13 +99,13 @@ export async function generateAcademicZKPDFProof(
             expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
             verified: circuitProof.signature_valid && circuitProof.substringMatches
         }
-        
+
         // Store zkPDF proof in database
         await storeZKPDFProof(walletAddress, proof, 'academic')
-        
+
         console.log(`✅ zkPDF academic proof generated: ${reputationScore} points`)
         return proof
-        
+
     } catch (error) {
         console.error('❌ zkPDF circuit generation failed:', error)
         throw new Error('Failed to generate zkPDF proof for academic credential')
@@ -127,12 +127,12 @@ export async function generateGitHubZKPDFProof(
         followers: number
     }
 ): Promise<ZKPDFReputationProof> {
-    
+
     console.log(`🐙 Generating zkPDF-style proof for GitHub: @${githubUsername}`)
-    
+
     // Calculate reputation score (same logic as before)
     let reputationScore = 5 // Base score
-    
+
     if (githubStats.totalCommits >= 200) {
         reputationScore += 150
     } else if (githubStats.totalCommits >= 50) {
@@ -140,12 +140,12 @@ export async function generateGitHubZKPDFProof(
     } else if (githubStats.totalCommits >= 10) {
         reputationScore += 25
     }
-    
+
     // Bonus scoring
     reputationScore += Math.min(githubStats.publicRepos * 2, 30)
     reputationScore += Math.min(githubStats.languages.length * 3, 20)
     reputationScore = Math.min(reputationScore, 200) // Cap at 200
-    
+
     // Create zkPDF-style proof for GitHub data verification
     const dataString = JSON.stringify({
         username: githubUsername,
@@ -154,13 +154,13 @@ export async function generateGitHubZKPDFProof(
         languages: githubStats.languages,
         verified_at: new Date().toISOString()
     })
-    
+
     // Generate zkPDF-compatible hashes and nullifiers
     const substringHash = sha256(Buffer.from(githubUsername))
     const messageDigestHash = sha256(Buffer.from(dataString))
     const signerKeyHash = sha256(Buffer.from(`github_oauth_${githubUsername}`))
     const nullifier = sha256(Buffer.from(`${walletAddress}_github_${githubUsername}`))
-    
+
     const circuitProof: ZKPDFCircuitOutput = {
         substringMatches: true, // GitHub username verified via OAuth
         messageDigestHash,
@@ -169,9 +169,9 @@ export async function generateGitHubZKPDFProof(
         nullifier,
         signature_valid: true // OAuth provides signature validation
     }
-    
+
     const proofId = `zkpdf_github_${Date.now()}_${generateRandomHex(8)}`
-    
+
     const proof: ZKPDFReputationProof = {
         proofId,
         walletAddress: walletAddress.toLowerCase(),
@@ -182,10 +182,10 @@ export async function generateGitHubZKPDFProof(
         expiresAt: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // 6 months
         verified: true
     }
-    
+
     // Store zkPDF proof in database
     await storeZKPDFProof(walletAddress, proof, 'github')
-    
+
     console.log(`✅ zkPDF GitHub proof generated: ${reputationScore} points`)
     return proof
 }
@@ -198,23 +198,23 @@ async function callZKPDFCircuit(
     input: ZKPDFCircuitInput,
     proofType: 'academic' | 'github'
 ): Promise<ZKPDFCircuitOutput> {
-    
+
     console.log('📡 Calling zkPDF circuit for proof generation...')
-    
+
     // For hackathon: Use simulation of zkPDF circuit calls
     // In production: This would call the actual Succinct Prover Network
-    
+
     try {
         // Simulate zkPDF circuit execution
         // Real implementation would POST to zkPDF prover API
         const response = await simulateZKPDFCircuit(input, proofType)
-        
+
         if (!response.success) {
             throw new Error(`zkPDF circuit failed: ${response.error}`)
         }
-        
+
         return response.circuitOutput
-        
+
     } catch (error) {
         console.error('❌ zkPDF circuit call failed:', error)
         throw error
@@ -229,21 +229,21 @@ async function simulateZKPDFCircuit(
     input: ZKPDFCircuitInput,
     proofType: string
 ): Promise<{ success: boolean; circuitOutput: ZKPDFCircuitOutput; error?: string }> {
-    
+
     // Simulate processing time
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     try {
         // Generate zkPDF-compatible hashes
         const substringHash = sha256(Buffer.from(input.substring))
         const messageDigestHash = sha256(input.pdf_bytes)
         const signerKeyHash = sha256(Buffer.from(`certificate_authority_${proofType}`))
         const nullifier = sha256(Buffer.from(`${Date.now()}_${input.substring}`))
-        
+
         // Simulate PDF parsing and signature verification
         const substringMatches = input.pdf_bytes.length > 1000 // Simulate finding text
         const signature_valid = true // Simulate valid signature
-        
+
         const circuitOutput: ZKPDFCircuitOutput = {
             substringMatches,
             messageDigestHash,
@@ -252,12 +252,12 @@ async function simulateZKPDFCircuit(
             nullifier,
             signature_valid
         }
-        
+
         return {
             success: true,
             circuitOutput
         }
-        
+
     } catch (error) {
         return {
             success: false,
@@ -277,7 +277,7 @@ async function storeZKPDFProof(
 ) {
     const scoreField = proofType === 'academic' ? 'education_score' : 'github_score'
     const proofsField = proofType === 'academic' ? 'education_proofs' : 'github_proofs'
-    
+
     const updateData = {
         wallet_address: walletAddress.toLowerCase(),
         [scoreField]: proof.reputationScore,
@@ -289,7 +289,7 @@ async function storeZKPDFProof(
             zkpdfProof: {
                 substringMatches: proof.circuitProof.substringMatches,
                 messageDigestHash: Array.from(proof.circuitProof.messageDigestHash),
-                signerKeyHash: Array.from(proof.circuitProof.signerKeyHash), 
+                signerKeyHash: Array.from(proof.circuitProof.signerKeyHash),
                 substringHash: Array.from(proof.circuitProof.substringHash),
                 nullifier: Array.from(proof.circuitProof.nullifier),
                 signature_valid: proof.circuitProof.signature_valid
@@ -297,16 +297,16 @@ async function storeZKPDFProof(
         }]),
         last_updated: new Date().toISOString()
     }
-    
+
     const { error } = await supabase
         .from('zk_credentials')
         .upsert(updateData)
-    
+
     if (error) {
         console.error('❌ Failed to store zkPDF proof:', error)
         throw new Error('Database storage failed')
     }
-    
+
     console.log('✅ zkPDF proof stored in database')
 }
 
@@ -320,37 +320,37 @@ export async function verifyZKPDFProof(proof: ZKPDFReputationProof): Promise<boo
             console.log('❌ zkPDF proof expired')
             return false
         }
-        
+
         // Verify circuit proof validity
         if (!proof.circuitProof.signature_valid || !proof.circuitProof.substringMatches) {
             console.log('❌ zkPDF circuit proof invalid')
             return false
         }
-        
+
         // Check nullifier for double-spending prevention
         const { data: existing } = await supabase
             .from('zk_credentials')
             .select('*')
             .eq('wallet_address', proof.walletAddress)
             .single()
-        
+
         if (existing) {
             const proofsField = proof.proofType === 'academic' ? 'education_proofs' : 'github_proofs'
             const existingProofs = JSON.parse(existing[proofsField] || '[]')
-            
+
             const duplicateNullifier = existingProofs.find((p: any) =>
                 Buffer.from(p.zkpdfProof.nullifier).equals(Buffer.from(proof.circuitProof.nullifier))
             )
-            
+
             if (duplicateNullifier) {
                 console.log('❌ zkPDF nullifier already used')
                 return false
             }
         }
-        
+
         console.log('✅ zkPDF proof verified')
         return true
-        
+
     } catch (error) {
         console.error('❌ zkPDF proof verification failed:', error)
         return false
@@ -385,7 +385,7 @@ export async function getZKPDFReputation(walletAddress: string): Promise<{
         .select('*')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single()
-    
+
     if (error || !data) {
         return {
             educationScore: 0,
@@ -396,7 +396,7 @@ export async function getZKPDFReputation(walletAddress: string): Promise<{
             zkpdfProofs: { academic: [], github: [] }
         }
     }
-    
+
     return {
         educationScore: data.education_score || 0,
         githubScore: data.github_score || 0,

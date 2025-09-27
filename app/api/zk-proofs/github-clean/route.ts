@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
                 repos: githubStats.publicRepos,
                 languages: githubStats.languages.length
             },
-            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy", 
+            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy",
             zkpdfCompliant: true
         })
 
