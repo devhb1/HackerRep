@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
             zkpdfProof: {
                 proofId: zkpdfProof.proofId,
                 proofType: zkpdfProof.proofType,
+                // zkPDF Circuit Hash (for demo visualization)
+                zkpdfHash: Buffer.from(zkpdfProof.circuitProof.messageDigestHash).toString('hex').substring(0, 16) + '...',
+                zkpdfNullifier: Buffer.from(zkpdfProof.circuitProof.nullifier).toString('hex').substring(0, 16) + '...',
                 circuitProof: {
                     substringMatches: zkpdfProof.circuitProof.substringMatches,
                     signature_valid: zkpdfProof.circuitProof.signature_valid,
@@ -66,7 +69,8 @@ export async function POST(request: NextRequest) {
                 repos: githubStats.publicRepos,
                 languages: githubStats.languages.length
             },
-            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy",
+            zkpdfGenerated: true,
+            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy - zkPDF Credential Sharing",
             zkpdfCompliant: true
         })
 

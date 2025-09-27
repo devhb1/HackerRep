@@ -310,7 +310,7 @@ async function storeZKPDFProof(
         github_score: proofType === 'github' ? proof.reputationScore : currentGithubScore,
         social_score: currentSocialScore,
         // Don't set total_base_score or reputation_tier - they're generated columns
-        completed_onboarding: false, // Will be updated later when full onboarding is done
+        completed_onboarding: true, // Mark as completed when zkPDF proof generated
         has_degree: proofType === 'academic' ? true : (currentData?.has_degree || false),
         has_certification: proofType === 'academic' ? true : (currentData?.has_certification || false),
         github_username: currentData?.github_username || null,

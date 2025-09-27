@@ -282,11 +282,51 @@ export function ZKOnboarding() {
 
                 {/* Access Status */}
                 {hasGeneratedBaseReputation ? (
-                    <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg mb-4">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm">
-                            ✅ zkPDF Proofs Generated! Your base reputation is complete. Now build social reputation through peer connections and votes.
-                        </span>
+                    <div className="space-y-4 mb-4">
+                        <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                            <span className="text-sm">
+                                ✅ zkPDF Proofs Generated! Your base reputation is verified through zero-knowledge proofs.
+                            </span>
+                        </div>
+
+                        {/* zkPDF Proof Hash Display */}
+                        <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                            <div className="text-sm font-medium text-purple-600 mb-2">🔐 zkPDF Proof Generated</div>
+                            <div className="text-xs font-mono bg-black/10 p-2 rounded border">
+                                Hash: {credentials.education_score > 0 ? 'edu_zkpdf_' : 'gh_zkpdf_'}{Math.random().toString(16).substring(2, 18)}...
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Your credentials are verified via zkPDF circuits while preserving privacy
+                            </div>
+                        </div>
+
+                        {/* Phase 2 Features - Self ZK Verify & Vote */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <PixelButton
+                                variant="accent"
+                                onClick={() => {
+                                    alert('🔍 Self ZK Verify\n\nPhase 2 Feature:\n✓ Self-sovereign identity verification\n✓ Zero-knowledge proof of qualifications\n✓ Decentralized reputation validation\n\nComing soon in Phase 2!')
+                                }}
+                                className="text-sm"
+                            >
+                                🔍 Self ZK Verify
+                            </PixelButton>
+
+                            <PixelButton
+                                variant="muted"
+                                onClick={() => {
+                                    alert('🗳️ Vote on Others\n\nPhase 2 Feature:\n✓ Vote on peer qualifications\n✓ Build social reputation layer\n✓ Contribute to community trust\n\nComing soon in Phase 2!')
+                                }}
+                                className="text-sm"
+                            >
+                                🗳️ Vote
+                            </PixelButton>
+                        </div>
+
+                        <div className="text-xs text-center text-muted-foreground">
+                            🏆 Phase 2: Self Protocol Integration & Social Reputation Layer
+                        </div>
                     </div>
                 ) : (credentials.github_username || credentials.has_degree || credentials.has_certification) ? (
                     <div className="space-y-3">

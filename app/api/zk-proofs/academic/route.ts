@@ -48,8 +48,13 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Generate zkPDF proof using OFFICIAL zkPDF library integration
-        console.log('🎓 Generating OFFICIAL zkPDF academic proof...')
+        // 🏆 ETHEREUM FOUNDATION: Generate zkPDF proof (simplified for demo)
+        console.log('🎓 Generating zkPDF academic proof based on degree type...')
+
+        // For hackathon demo: Accept any PDF and award points based on degree selection
+        console.log(`📄 PDF uploaded: ${certificate.name} (${(certificate.size / 1024).toFixed(2)} KB)`)
+        console.log(`🎯 Degree type: ${degreeType}, Institution: ${institution}`)
+
         const fileBuffer = await certificate.arrayBuffer()
 
         const zkpdfProof = await generateAcademicZKPDFProof(
@@ -70,10 +75,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: `🎓 Official zkPDF academic proof generated! ${zkpdfProof.reputationScore} reputation points earned.`,
+            message: `🎓 zkPDF Academic Proof Generated! ${zkpdfProof.reputationScore} reputation points earned.`,
             zkpdfProof: {
                 proofId: zkpdfProof.proofId,
                 proofType: zkpdfProof.proofType,
+                // zkPDF Circuit Hash (for demo visualization)
+                zkpdfHash: Buffer.from(zkpdfProof.circuitProof.messageDigestHash).toString('hex').substring(0, 16) + '...',
+                zkpdfNullifier: Buffer.from(zkpdfProof.circuitProof.nullifier).toString('hex').substring(0, 16) + '...',
                 circuitProof: {
                     substringMatches: zkpdfProof.circuitProof.substringMatches,
                     signature_valid: zkpdfProof.circuitProof.signature_valid,
@@ -88,7 +96,8 @@ export async function POST(request: NextRequest) {
             scoreAwarded: zkpdfProof.reputationScore,
             degreeType,
             institution,
-            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy",
+            zkpdfGenerated: true,
+            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy - zkPDF Credential Sharing",
             zkpdfCompliant: true
         })
 
