@@ -81,6 +81,13 @@ export function ZKOnboarding() {
             if (response.ok) {
                 const data = await response.json()
                 setCredentials(data.credentials)
+                
+                // Auto-expand the next step after GitHub connection
+                const urlParams = new URLSearchParams(window.location.search)
+                const githubConnected = urlParams.get('github_connected')
+                if (githubConnected === 'true' && !data.credentials.has_degree && !data.credentials.has_certification) {
+                    setCurrentStep('education')
+                }
             } else {
                 // User doesn't have ZK credentials yet, create empty record
                 setCredentials({
@@ -248,6 +255,13 @@ export function ZKOnboarding() {
                             ✅ Base reputation generated! Your ZK proof is complete. Now build social reputation through peer connections and votes.
                         </span>
                     </div>
+                ) : (credentials.has_degree || credentials.has_certification) && credentials.github_username ? (
+                    <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
+                        <CheckCircle className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm">
+                            🎯 Both credentials connected! Click "Generate ZK Proof Reputation" to complete your base reputation.
+                        </span>
+                    </div>
                 ) : (
                     <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-4">
                         <AlertCircle className="h-5 w-5 text-yellow-500" />
@@ -324,27 +338,31 @@ export function ZKOnboarding() {
             <div className="flex gap-4 justify-center">
                 {!hasGeneratedBaseReputation && (
                     <div className="flex gap-2">
-                        <PixelButton
-                            variant="accent"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setCurrentStep('education')
-                            }}
-                        >
-                            Add Academic Credentials
-                        </PixelButton>
-                        <PixelButton
-                            variant="accent"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setCurrentStep('github')
-                            }}
-                        >
-                            Connect GitHub
-                        </PixelButton>
+                        {!credentials.has_degree && !credentials.has_certification && (
+                            <PixelButton
+                                variant="accent"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCurrentStep('education')
+                                }}
+                            >
+                                Add Academic Credentials
+                            </PixelButton>
+                        )}
+                        {!credentials.github_username && (
+                            <PixelButton
+                                variant="accent"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCurrentStep('github')
+                                }}
+                            >
+                                Connect GitHub
+                            </PixelButton>
+                        )}
                     </div>
                 )}
-                {!hasGeneratedBaseReputation && credentials.has_degree && credentials.github_username && (
+                {!hasGeneratedBaseReputation && (credentials.has_degree || credentials.has_certification) && credentials.github_username && (
                     <PixelButton
                         variant="primary"
                         onClick={(e) => {
@@ -721,7 +739,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                                 {uploading && zkProofStatus === 'parsing' && 'Parsing PDF...'}
                                 {uploading && zkProofStatus === 'generating' && 'Generating ZK Proof...'}
                                 {uploading && zkProofStatus === 'verifying' && 'Verifying Proof...'}
-                                {!uploading && 'Generate zkPDF Proof'}
+                                {!uploading && 'Submit Academic Credential'}
                             </PixelButton>
                         </div>
                     )}

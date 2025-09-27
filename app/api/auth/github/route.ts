@@ -195,9 +195,9 @@ export async function GET(request: NextRequest) {
             console.log('⚠️ Database update failed, but continuing with GitHub connection...')
         }
 
-        // Redirect back to homepage with success message
+        // Redirect back to homepage with success message and refresh credentials
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
-        const successUrl = `${baseUrl.replace(/\/$/, '')}/?github_connected=true&score=${githubScore}&username=${githubUser.login}`
+        const successUrl = `${baseUrl.replace(/\/$/, '')}/?github_connected=true&score=${githubScore}&username=${githubUser.login}&refresh=true`
 
         return NextResponse.redirect(successUrl)
 

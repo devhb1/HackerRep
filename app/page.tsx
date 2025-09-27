@@ -66,7 +66,7 @@ export default function HomePage() {
 
     if (githubConnected === 'true' && githubScore && githubUsername) {
       // Show success message
-      alert(`🎉 GitHub connected successfully! You earned ${githubScore} reputation points from @${githubUsername}`)
+      alert(`🎉 GitHub connected successfully! You earned ${githubScore} reputation points from @${githubUsername}\n\nNow complete your academic credentials to generate your ZK proof reputation.`)
       // Refresh credentials to show updated score
       if (isConnected && address) {
         checkZKCredentials()
