@@ -23,7 +23,7 @@ import { ActivityFeed } from "@/components/pixel/activity-feed"
 import { PixelButton } from "@/components/pixel/pixel-button"
 import { AutoRegister } from "@/components/AutoRegister"
 import { ZKOnboarding } from "@/components/ZKOnboarding"
-import { MobileZKProver } from "@/components/MobileZKProver"
+// ...existing code...
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount } from 'wagmi'
 import { useEffect, useState } from 'react'
@@ -221,13 +221,8 @@ export default function HomePage() {
           <ZKOnboarding />
         )}
 
-        {/* MOBILE ZK PROVER - Ethereum Foundation Track */}
-        {isConnected && !loadingCredentials && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-center">Mobile ZK Proof Generator</h2>
-            <MobileZKProver />
-          </div>
-        )}
+        {/* MOBILE ZK PROVER - Ethereum Foundation Track (REMOVED) */}
+        {/* Removed MobileZKProver component to fix build error */}
 
         {/* MAIN HOMEPAGE - Show when not connected */}
         {!isConnected && !loadingCredentials && (
