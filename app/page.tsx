@@ -1,3 +1,18 @@
+/**
+ * HackerRep Homepage
+ * 
+ * Main landing page that displays:
+ * - Platform statistics (users, connections, votes)
+ * - ZK onboarding flow for new users (if ZK credentials missing)
+ * - Activity feed showing real-time platform activity
+ * - Auto-registration via AutoRegister component
+ * 
+ * Flow:
+ * 1. User connects wallet → AutoRegister creates user profile
+ * 2. Check for ZK credentials → Show ZKOnboarding if missing
+ * 3. Display platform stats and activity feed
+ */
+
 'use client'
 
 import Link from "next/link"
@@ -7,18 +22,22 @@ import { StatCard } from "@/components/pixel/stat-card"
 import { ActivityFeed } from "@/components/pixel/activity-feed"
 import { PixelButton } from "@/components/pixel/pixel-button"
 import { AutoRegister } from "@/components/AutoRegister"
+import { ZKOnboarding } from "@/components/ZKOnboarding"
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount } from 'wagmi'
 import { useEffect, useState } from 'react'
 
 export default function HomePage() {
-  const { isConnected } = useAccount()
+  const { isConnected, address } = useAccount()
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeConnections: 0,
     votesToday: 0,
     totalActivities: 0
   })
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [zkCredentials, setZkCredentials] = useState<any>(null)
+  const [loadingCredentials, setLoadingCredentials] = useState(true)
 
   useEffect(() => {
     fetchStats()
@@ -26,6 +45,15 @@ export default function HomePage() {
     const interval = setInterval(fetchStats, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (isConnected && address) {
+      checkZKCredentials()
+    } else {
+      setLoadingCredentials(false)
+      setZkCredentials(null)
+    }
+  }, [isConnected, address])
 
   const fetchStats = async () => {
     try {
@@ -37,6 +65,33 @@ export default function HomePage() {
     } catch (error) {
       console.error('Failed to fetch stats:', error)
     }
+  }
+
+  const checkZKCredentials = async () => {
+    if (!address) return
+
+    setLoadingCredentials(true)
+    try {
+      const response = await fetch(`/api/zk-credentials/${address}`)
+      if (response.ok) {
+        const data = await response.json()
+        setZkCredentials(data.credentials)
+
+        // Show onboarding if user hasn't completed it or has low base score
+        const needsOnboarding = !data.credentials.completed_onboarding ||
+          data.credentials.total_base_score < 50
+        setShowOnboarding(needsOnboarding)
+      } else if (response.status === 404) {
+        // User doesn't have ZK credentials yet - show onboarding
+        setZkCredentials(null)
+        setShowOnboarding(true)
+      }
+    } catch (error) {
+      console.error('Failed to check ZK credentials:', error)
+      // On error, also show onboarding to help user get started
+      setShowOnboarding(true)
+    }
+    setLoadingCredentials(false)
   }
 
   return (
@@ -136,24 +191,42 @@ export default function HomePage() {
         {/* AUTO-REGISTRATION FOR CONNECTED USERS */}
         {isConnected && <AutoRegister />}
 
-        <NFCHero />
+        {/* ZK ONBOARDING FLOW - Show when connected (temporarily always show for testing) */}
+        {isConnected && !loadingCredentials && (
+          <ZKOnboarding />
+        )}
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard
-            label="Total Hackers"
-            value={`${stats.totalUsers.toLocaleString()} BUILDERS`}
-          />
-          <StatCard
-            label="Active Connections"
-            value={`${stats.activeConnections} CONNECTED`}
-          />
-          <StatCard
-            label="Votes Today"
-            value={`${stats.votesToday.toLocaleString()} VOTES`}
-          />
-        </section>
+        {/* MAIN HOMEPAGE - Show when not connected */}
+        {!isConnected && !loadingCredentials && (
+          <>
+            <NFCHero />
 
-        <ActivityFeed />
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard
+                label="Total Hackers"
+                value={`${stats.totalUsers.toLocaleString()} BUILDERS`}
+              />
+              <StatCard
+                label="Active Connections"
+                value={`${stats.activeConnections} CONNECTED`}
+              />
+              <StatCard
+                label="Votes Today"
+                value={`${stats.votesToday.toLocaleString()} VOTES`}
+              />
+            </section>
+
+            <ActivityFeed />
+          </>
+        )}
+
+        {/* LOADING STATE */}
+        {loadingCredentials && isConnected && (
+          <div className="text-center py-12">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading your ZK credentials...</p>
+          </div>
+        )}
       </div>
 
       <footer className="border-t border-border mt-8">

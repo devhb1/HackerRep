@@ -48,18 +48,40 @@ HackerRep is a decentralized reputation system for hackers and developers, built
 - Search page for finding hackers
 - Connection request workflow (send)
 
+### Phase 4: ZK Credentials & Reputation System (Current)
+- ZK proof registry for education certificates
+- Reputation scoring (0-600 points: Education + GitHub + Social)
+- Auto-calculated reputation tiers (newcomer → student → developer → senior-dev → blockchain-expert)
+- ENS dynamic subname system (student.alice.eth, dev.alice.eth, etc.)
+- ZK onboarding flow with PDF upload simulation
+
 
 ## Key Files
 
+### Core App
+- `/app/page.tsx` - Homepage with ZK onboarding flow
+- `/app/search/page.tsx` - Search and connect UI
+- `/components/AutoRegister.tsx` - ENS onboarding logic
+- `/components/ZKOnboarding.tsx` - ZK proof registry UI
+
+### API Routes
 - `/app/api/users/register/route.ts` - User registration logic
+- `/app/api/zk-credentials/[walletAddress]/route.ts` - ZK credentials management
+- `/app/api/zk-proofs/generate/route.ts` - ZK proof generation API
 - `/app/api/activities/route.ts` - Activity feed API
 - `/app/api/connections/request/route.ts` - Connection request API
 - `/app/api/users/search/route.ts` - User search API
 - `/app/api/stats/route.ts` - Platform stats API
-- `/components/AutoRegister.tsx` - ENS onboarding logic
-- `/app/search/page.tsx` - Search and connect UI
+
+### Database & Setup
+- `/database-complete.sql` - **Main DB schema (run this once in Supabase)**
+- `/zk-credentials-only.sql` - Incremental ZK setup for existing DBs
+- `/DATABASE-SETUP.md` - Setup instructions for developers
 - `/lib/supabase.ts` - Supabase client/types
-- `/supabase-schema.sql` - DB schema
+
+### Scripts (Optional)
+- `/scripts/setup-db.ts` - Database connectivity tester
+- `/scripts/setup-zk-database.ts` - ZK table connectivity tester
 
 ---
 For questions, open an issue or DM @devhb1

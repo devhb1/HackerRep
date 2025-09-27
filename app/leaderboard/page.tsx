@@ -1,15 +1,28 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
 export default function LeaderboardPage() {
-  const rows = [
-    { rank: 1, name: "alice.eth", up: 420, down: 12, net: 408, conv: 77 },
-    { rank: 2, name: "bob.eth", up: 400, down: 20, net: 380, conv: 64 },
-    { rank: 3, name: "charlie.eth", up: 350, down: 10, net: 340, conv: 58 },
-    { rank: 4, name: "dora.eth", up: 320, down: 30, net: 290, conv: 61 },
-  ]
+  const [rows, setRows] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    async function fetchLeaderboard() {
+      setLoading(true)
+      const res = await fetch('/api/leaderboard')
+      const data = await res.json()
+      setRows(data.leaderboard || [])
+      setLoading(false)
+    }
+    fetchLeaderboard()
+  }, [])
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
       <h1 className="font-pixel text-2xl text-primary glitch">🏆 HACKER LEADERBOARD</h1>
       <div className="pixel-border bg-card p-4 overflow-hidden">
         <div className="overflow-x-auto">
+          {loading && <div className="text-muted-foreground">Loading...</div>}
           <table className="w-full text-sm">
             <thead className="text-left text-muted-foreground border-b border-border">
               <tr>
@@ -22,14 +35,14 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.rank} className="border-b border-border/60">
-                  <td className="py-2 pr-4 font-pixel text-primary">#{r.rank}</td>
-                  <td className="py-2 pr-4">{r.name}</td>
-                  <td className="py-2 pr-4 text-green-300">{r.up}</td>
-                  <td className="py-2 pr-4 text-red-300">{r.down}</td>
-                  <td className="py-2 pr-4">{r.net}</td>
-                  <td className="py-2 pr-4">{r.conv}</td>
+              {rows.map((r, i) => (
+                <tr key={r.id || i} className="border-b border-border/60">
+                  <td className="py-2 pr-4 font-pixel text-primary">#{i + 1}</td>
+                  <td className="py-2 pr-4">{r.ens_name || r.display_name || r.wallet_address}</td>
+                  <td className="py-2 pr-4 text-green-300">{r.total_upvotes}</td>
+                  <td className="py-2 pr-4 text-red-300">{r.total_downvotes}</td>
+                  <td className="py-2 pr-4">{r.reputation}</td>
+                  <td className="py-2 pr-4">{r.total_connections}</td>
                 </tr>
               ))}
             </tbody>

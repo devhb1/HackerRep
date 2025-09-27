@@ -37,3 +37,44 @@ export type Vote = {
     connection_request_id: string
     created_at: string
 }
+
+export type ZKCredentials = {
+    id: string
+    wallet_address: string
+    education_score: number
+    github_score: number
+    social_score: number
+    total_base_score: number
+    reputation_tier: 'newcomer' | 'student' | 'developer' | 'senior-dev' | 'blockchain-expert'
+    completed_onboarding: boolean
+    has_degree: boolean
+    has_certification: boolean
+    github_username: string | null
+    github_data: any
+    education_proofs: any
+    github_proofs: any
+    created_at: string
+    updated_at: string
+}
+
+export type ENSSubname = {
+    id: string
+    wallet_address: string
+    subname: string
+    full_ens_name: string | null
+    required_score: number
+    earned_at: string
+    is_active: boolean
+}
+
+export type CredentialUpload = {
+    id: string
+    wallet_address: string
+    upload_type: string
+    file_hash: string | null
+    zk_proof_hash: string | null
+    verification_status: 'pending' | 'verified' | 'failed'
+    score_awarded: number
+    metadata: any
+    created_at: string
+}

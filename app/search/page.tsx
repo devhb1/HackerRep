@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { PixelButton } from '@/components/pixel/pixel-button'
 import { User } from '@/lib/supabase'
@@ -10,6 +10,32 @@ export default function SearchPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [searchResults, setSearchResults] = useState<User[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [connectionStatuses, setConnectionStatuses] = useState<Record<string, string>>({})
+
+    // Check connection status for a specific user
+    const checkConnectionStatus = async (targetWallet: string) => {
+        if (!address) return 'none'
+        try {
+            const response = await fetch(`/api/connections/status?current=${address}&target=${targetWallet}`)
+            const data = await response.json()
+            return data.status || 'none'
+        } catch (error) {
+            console.error('Failed to check connection status:', error)
+            return 'none'
+        }
+    }
+
+    // Update connection statuses for all search results
+    const updateConnectionStatuses = async (users: User[]) => {
+        if (!address) return
+        const statuses: Record<string, string> = {}
+
+        for (const user of users) {
+            statuses[user.wallet_address] = await checkConnectionStatus(user.wallet_address)
+        }
+
+        setConnectionStatuses(statuses)
+    }
 
     const searchUsers = async () => {
         if (!searchTerm.trim()) return
@@ -18,7 +44,10 @@ export default function SearchPage() {
         try {
             const response = await fetch(`/api/users/search?q=${encodeURIComponent(searchTerm)}`)
             const data = await response.json()
-            setSearchResults(data.users || [])
+            const users = data.users || []
+            setSearchResults(users)
+            // Update connection statuses for the search results
+            await updateConnectionStatuses(users)
         } catch (error) {
             console.error('Search error:', error)
         }
@@ -38,6 +67,8 @@ export default function SearchPage() {
 
             if (response.ok) {
                 alert('🚀 Connection request sent!')
+                // Refresh connection statuses after sending
+                await updateConnectionStatuses(searchResults)
             } else {
                 const error = await response.json()
                 alert(`❌ ${error.error}`)
@@ -71,45 +102,62 @@ export default function SearchPage() {
                 </div>
 
                 <div className="space-y-3">
-                    {searchResults.map((user) => (
-                        <div key={user.id} className="flex items-center justify-between pixel-border bg-muted p-4">
-                            <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-full pixel-border bg-muted flex items-center justify-center overflow-hidden">
-                                    {user.avatar_url ? (
-                                        <img
-                                            src={user.avatar_url}
-                                            alt=""
-                                            className="size-12 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="size-12 rounded-full bg-accent flex items-center justify-center text-lg font-pixel">
-                                            {user.display_name?.[0]?.toUpperCase() || '?'}
+                    {searchResults.map((user) => {
+                        const connectionStatus = connectionStatuses[user.wallet_address] || 'none'
+                        return (
+                            <div key={user.id} className="flex items-center justify-between pixel-border bg-muted p-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-12 rounded-full pixel-border bg-muted flex items-center justify-center overflow-hidden">
+                                        {user.avatar_url ? (
+                                            <img
+                                                src={user.avatar_url}
+                                                alt=""
+                                                className="size-12 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="size-12 rounded-full bg-accent flex items-center justify-center text-lg font-pixel">
+                                                {user.display_name?.[0]?.toUpperCase() || '?'}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="font-pixel text-foreground">
+                                            {user.display_name}
+                                            {user.ens_name && <span className="ml-2 text-green-400 text-xs">✓ ENS</span>}
                                         </div>
-                                    )}
-                                </div>
-                                <div>
-                                    <div className="font-pixel text-foreground">
-                                        {user.display_name}
-                                        {user.ens_name && <span className="ml-2 text-green-400 text-xs">✓ ENS</span>}
+                                        <div className="text-sm text-muted-foreground">
+                                            Rep: {user.reputation} • Connections: {user.total_connections}
+                                        </div>
+                                        {user.ens_name && (
+                                            <div className="text-xs text-accent">{user.ens_name}</div>
+                                        )}
                                     </div>
-                                    <div className="text-sm text-muted-foreground">
-                                        Rep: {user.reputation} • Connections: {user.total_connections}
-                                    </div>
-                                    {user.ens_name && (
-                                        <div className="text-xs text-accent">{user.ens_name}</div>
-                                    )}
                                 </div>
-                            </div>
 
-                            <PixelButton
-                                onClick={() => sendConnectionRequest(user.wallet_address)}
-                                variant="accent"
-                                className="text-sm"
-                            >
-                                Connect
-                            </PixelButton>
-                        </div>
-                    ))}
+                                {connectionStatus === 'pending_sent' ? (
+                                    <PixelButton disabled variant="muted" className="text-sm opacity-60 cursor-not-allowed">
+                                        Pending
+                                    </PixelButton>
+                                ) : connectionStatus === 'pending_received' ? (
+                                    <PixelButton disabled variant="primary" className="text-sm">
+                                        Requested You
+                                    </PixelButton>
+                                ) : connectionStatus === 'connected' ? (
+                                    <PixelButton disabled variant="accent" className="text-sm">
+                                        Connected
+                                    </PixelButton>
+                                ) : (
+                                    <PixelButton
+                                        onClick={() => sendConnectionRequest(user.wallet_address)}
+                                        variant="accent"
+                                        className="text-sm"
+                                    >
+                                        Connect
+                                    </PixelButton>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
 
                 {searchResults.length === 0 && searchTerm && !isLoading && (

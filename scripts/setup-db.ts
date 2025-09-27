@@ -1,8 +1,14 @@
+// ========================================
+// HackerRep Database Setup Script
+// ========================================
+// This script tests database connectivity and guides manual SQL setup.
+// For full database initialization, use database-complete.sql in Supabase SQL Editor.
+
 import { supabase } from '@/lib/supabase'
 
 async function setupDatabase() {
     try {
-        console.log('🔥 Setting up HackerRep database...')
+        console.log('🔥 Testing HackerRep database connectivity...')
 
         // Test connection
         const { data: testData, error: testError } = await supabase
@@ -27,9 +33,11 @@ async function setupDatabase() {
                 .select()
 
             if (insertError) {
-                console.error('❌ Database setup needed. Please run these SQL commands in your Supabase SQL editor:')
+                console.error('❌ Database setup needed.')
+                console.log('📝 Please run database-complete.sql in your Supabase SQL Editor for full setup.')
+                console.log('🔗 Find it in the project root: database-complete.sql')
                 console.log(`
--- Users table
+-- Or use this minimal setup for core tables:
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   wallet_address TEXT UNIQUE NOT NULL,
