@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
     if (!code) {
         // Redirect to GitHub OAuth
         const clientId = process.env.GITHUB_CLIENT_ID
-        const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/github`
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+        // Ensure no double slashes in redirect URI
+        const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/auth/github`
         const scope = 'read:user user:email'
         const stateParam = crypto.randomBytes(32).toString('hex')
 
@@ -63,13 +65,15 @@ export async function GET(request: NextRequest) {
 
         // For now, redirect back to homepage with success message
         // In production, you'd want to properly handle the wallet address state
-        const successUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/?github_connected=true&score=${githubScore}&username=${githubUser.login}`
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+        const successUrl = `${baseUrl.replace(/\/$/, '')}/?github_connected=true&score=${githubScore}&username=${githubUser.login}`
 
         return NextResponse.redirect(successUrl)
 
     } catch (error) {
         console.error('GitHub OAuth error:', error)
-        const errorUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/?github_error=true`
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
+        const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=true`
         return NextResponse.redirect(errorUrl)
     }
 }
