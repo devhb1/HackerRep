@@ -92,7 +92,7 @@ export function ZKOnboarding() {
                 const data = await response.json()
                 console.log('📊 Fetched credentials:', data.credentials)
                 setCredentials(data.credentials)
-                
+
                 // Auto-expand the next step after GitHub connection
                 const urlParams = new URLSearchParams(window.location.search)
                 const githubConnected = urlParams.get('github_connected')
@@ -121,15 +121,15 @@ export function ZKOnboarding() {
 
     const generateZKProofReputation = async () => {
         if (!address || !credentials) return
-        
+
         setGeneratingReputation(true)
-        
+
         try {
             console.log('🏆 Generating final ZK proof reputation...')
-            
+
             // Calculate final base reputation score
             const finalScore = credentials.education_score + credentials.github_score
-            
+
             // Update the credentials with completed status
             const response = await fetch(`/api/zk-credentials/${address}`, {
                 method: 'POST',
@@ -140,7 +140,7 @@ export function ZKOnboarding() {
                     reputation_tier: getReputationTier(finalScore)
                 })
             })
-            
+
             if (response.ok) {
                 alert(`🎉 ZK Proof Reputation Generated!\n\n` +
                     `✅ Academic Reputation: ${credentials.education_score} points\n` +
@@ -148,7 +148,7 @@ export function ZKOnboarding() {
                     `✅ Total Base Reputation: ${finalScore} points\n` +
                     `✅ Reputation Tier: ${getReputationTier(finalScore)}\n\n` +
                     `🔒 Your ZK proof is complete! Now build social reputation through peer connections and votes.`)
-                
+
                 // Refresh credentials
                 fetchCredentials()
             } else {
@@ -158,7 +158,7 @@ export function ZKOnboarding() {
             console.error('Failed to generate ZK proof reputation:', error)
             alert('❌ Failed to generate ZK proof reputation. Please try again.')
         }
-        
+
         setGeneratingReputation(false)
     }
 
@@ -281,14 +281,14 @@ export function ZKOnboarding() {
                                 try {
                                     // Generate zkPDF proofs for both credentials
                                     alert('🔄 Generating zkPDF proofs for both credentials...\n\nThis will create zero-knowledge proofs for:\n✓ Academic credentials\n✓ GitHub contributions\n\nPlease wait...')
-                                    
+
                                     // In a real implementation, this would trigger the zkPDF proof generation
                                     // For now, we'll simulate the process
                                     await new Promise(resolve => setTimeout(resolve, 2000))
-                                    
+
                                     // Refresh credentials to show updated scores
                                     await fetchCredentials()
-                                    
+
                                     alert('✅ zkPDF proofs generated successfully!\n\nYour reputation scores are now verified through zero-knowledge proofs.')
                                 } catch (error) {
                                     console.error('zkPDF generation failed:', error)
@@ -333,8 +333,8 @@ export function ZKOnboarding() {
                                 } ${step.completed ? 'border-green-500/40' : 'border-muted'}`}
                             onClick={(e) => {
                                 // Don't toggle if clicking on form elements
-                                if (e.target instanceof HTMLSelectElement || 
-                                    e.target instanceof HTMLInputElement || 
+                                if (e.target instanceof HTMLSelectElement ||
+                                    e.target instanceof HTMLInputElement ||
                                     e.target instanceof HTMLButtonElement ||
                                     e.target instanceof HTMLLabelElement ||
                                     (e.target as HTMLElement).closest('select, input, button, label')) {
@@ -613,7 +613,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
         } catch (error) {
             console.error('zkPDF proof generation failed:', error)
             let errorMessage = 'Please check your certificate and try again'
-            
+
             if (error instanceof Error) {
                 if (error.name === 'AbortError') {
                     errorMessage = 'Request timed out. Please try again with a smaller file.'
@@ -623,7 +623,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                     errorMessage = error.message
                 }
             }
-            
+
             alert(`❌ ZK Proof Generation Failed\n\n${errorMessage}\n\nTips:\n• Ensure PDF contains institution name\n• Check that degree type matches certificate\n• Verify PDF is not corrupted\n• Try with a smaller file if upload is slow`)
             setZkProofStatus('idle')
             setProofDetails(null)
