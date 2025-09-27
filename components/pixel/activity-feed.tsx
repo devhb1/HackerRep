@@ -58,20 +58,43 @@ export function ActivityFeed({ className }: { className?: string }) {
     return `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`
   }
 
+  const getActivityIcon = (activityType: string, description: string) => {
+    if (description.includes('zkPDF') || description.includes('ZK proof')) return '🔒'
+    if (description.includes('GitHub') || description.includes('repository')) return '⚡'
+    if (description.includes('academic') || description.includes('degree')) return '🎓'
+    if (description.includes('joined') || description.includes('registered')) return '👋'
+    if (description.includes('vote') || description.includes('reputation')) return '🗳️'
+    return '📊'
+  }
+
   const getUpdatedDescription = (activity: Activity) => {
     const displayName = getDisplayName(activity.user)
-    // Replace wallet addresses or old display names in activity descriptions
+    const icon = getActivityIcon(activity.activity_type, activity.description)
+
+    // Enhanced descriptions for ZK-related activities
     if (activity.description.includes('New hacker joined:')) {
-      return `New hacker joined: ${displayName}`
+      return `${icon} ${displayName} joined HackerRep`
     }
-    return activity.description
+    if (activity.description.includes('zkPDF')) {
+      return `🔒 ${displayName} generated ZK proof`
+    }
+    if (activity.description.includes('GitHub')) {
+      return `⚡ ${displayName} verified GitHub skills`
+    }
+    if (activity.description.includes('academic')) {
+      return `🎓 ${displayName} verified education`
+    }
+
+    return `${icon} ${activity.description.replace(/0x[a-fA-F0-9]+/g, displayName)}`
   }
 
   return (
     <div className={cn("pixel-border bg-card p-4 md:p-6 overflow-hidden", className)}>
       <div className="flex items-center justify-between">
-        <h3 className="font-pixel text-primary text-base">Recent Activity</h3>
-        <span className="text-xs text-muted-foreground">Auto-updating</span>
+        <h3 className="font-pixel text-primary text-base flex items-center gap-2">
+          🔍 ZK Activity Feed
+        </h3>
+        <span className="text-xs text-muted-foreground">Live updates</span>
       </div>
       <div className="mt-4 h-40 md:h-48 overflow-y-auto scanlines pr-2">
         {isLoading ? (

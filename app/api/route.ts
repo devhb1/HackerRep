@@ -8,20 +8,39 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
     const apiEndpoints = {
-        status: 'API is working',
+        status: 'ZK Reputation API is operational',
         timestamp: new Date().toISOString(),
+        system: 'Privacy-First Reputation Protocol',
         endpoints: {
-            users: '/api/users - List all users',
-            stats: '/api/stats - Platform statistics',
-            debug: '/api/debug/database - Database health check',
-            zkCredentials: '/api/zk-credentials/[wallet] - ZK credentials by wallet',
+            // Core ZK System
+            zkCredentials: '/api/zk-credentials/[wallet] - ZK credentials management',
+            zkProofsAcademic: '/api/zk-proofs/academic - Academic zkPDF proof generation',
+            zkProofsGithub: '/api/zk-proofs/github-clean - GitHub zkPDF proof generation',
+
+            // User Management
+            users: '/api/users - User profiles',
             userRegister: '/api/users/register - Register new user',
             userSearch: '/api/users/search - Search users',
-            connections: '/api/connections - Connection requests',
-            votes: '/api/votes - Voting system',
-            activities: '/api/activities - User activities'
+
+            // Social Layer
+            connections: '/api/connections - Connection system',
+            votes: '/api/votes - Peer voting system',
+            activities: '/api/activities - Activity feed',
+
+            // Platform
+            stats: '/api/stats - Platform statistics',
+            leaderboard: '/api/leaderboard - ZK verified reputation rankings',
+
+            // Authentication
+            auth: '/api/auth/github - GitHub OAuth integration'
         },
-        note: 'This is a HackerRep API endpoint for testing'
+        features: [
+            '🔒 zkPDF Zero-Knowledge Proofs',
+            '🎓 Academic Credential Verification',
+            '⚡ GitHub Skill Verification',
+            '🗳️ Peer Reputation Voting',
+            '🏆 Privacy-Preserving Leaderboards'
+        ]
     }
 
     return NextResponse.json(apiEndpoints)

@@ -7,15 +7,20 @@ interface LeaderboardUser {
   rank: number
   wallet_address: string
   display_name: string
+  ens_name?: string
+  avatar_url?: string
+  seniority_index: number
   zkpdf_reputation: number
   education_score: number
   github_score: number
   social_score: number
   reputation_tier: string
+  github_username?: string
   total_upvotes: number
   total_downvotes: number
   current_reputation: number
   zkpdf_verified: boolean
+  level: string
 }
 
 export default function LeaderboardPage() {
@@ -52,9 +57,9 @@ export default function LeaderboardPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="font-pixel text-3xl text-primary glitch">🏆 zkPDF REPUTATION LEADERBOARD</h1>
+        <h1 className="font-pixel text-3xl text-primary glitch">🏆 ZK PROOF REPUTATION LEADERBOARD</h1>
         <p className="text-muted-foreground">
-          Ethereum Foundation Hackathon • Only users with zkPDF-verified credentials
+          Privacy-First Reputation System • Zero-Knowledge Verified Credentials
         </p>
         <div className="text-sm text-accent">
           {totalUsers} verified users with zero-knowledge proofs
@@ -67,8 +72,8 @@ export default function LeaderboardPage() {
 
           {!loading && rows.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <div className="text-lg mb-2">🔍 No zkPDF verified users yet</div>
-              <div className="text-sm">Be the first to generate zkPDF reputation proofs!</div>
+              <div className="text-lg mb-2">🔍 No ZK verified users yet</div>
+              <div className="text-sm">Be the first to generate zero-knowledge reputation proofs!</div>
             </div>
           )}
 
@@ -77,8 +82,8 @@ export default function LeaderboardPage() {
               <thead className="text-left text-muted-foreground border-b border-border">
                 <tr>
                   <th className="py-3 pr-4">Rank</th>
-                  <th className="py-3 pr-4">Wallet</th>
-                  <th className="py-3 pr-4">zkPDF Reputation</th>
+                  <th className="py-3 pr-4">User/ENS</th>
+                  <th className="py-3 pr-4">ZK Reputation</th>
                   <th className="py-3 pr-4">Education</th>
                   <th className="py-3 pr-4">GitHub</th>
                   <th className="py-3 pr-4">7d Upvotes</th>
@@ -98,10 +103,26 @@ export default function LeaderboardPage() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 pr-4 font-mono text-xs">
-                      {user.display_name}
-                      <div className="text-xs text-muted-foreground">
-                        ✅ zkPDF Verified
+                    <td className="py-3 pr-4">
+                      <div className="flex items-center gap-2">
+                        {user.avatar_url && (
+                          <img
+                            src={user.avatar_url}
+                            alt=""
+                            className="w-6 h-6 rounded pixel-border"
+                          />
+                        )}
+                        <div>
+                          <div className={`${user.ens_name ? 'text-accent font-medium' : 'font-mono text-xs'}`}>
+                            {user.display_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <span className={user.level.includes('Level 1') ? 'text-green-400' : 'text-yellow-400'}>
+                              {user.level}
+                            </span>
+                            {user.ens_name && <span>🌐</span>}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 pr-4">
@@ -147,7 +168,7 @@ export default function LeaderboardPage() {
 
         {!loading && rows.length > 0 && (
           <div className="mt-4 text-xs text-muted-foreground text-center">
-            🔐 All reputations verified through zkPDF zero-knowledge proofs •
+            🔐 All reputations verified through zero-knowledge proofs •
             Phase 2: Social reputation layer with Self Protocol integration
           </div>
         )}

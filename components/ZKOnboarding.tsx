@@ -35,7 +35,9 @@
 
 import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
+import { useENSProfile } from '@/hooks/useENS'
 import { PixelButton } from './pixel/pixel-button'
+import { Logo } from './pixel/logo'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import { Upload, Github, GraduationCap, Users, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
@@ -70,7 +72,8 @@ interface OnboardingStep {
 }
 
 export function ZKOnboarding() {
-    const { address, isConnected } = useAccount()
+    const { isConnected, address } = useAccount()
+    const { displayName } = useENSProfile(address)
     const [credentials, setCredentials] = useState<ZKCredentials | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentStep, setCurrentStep] = useState<string | null>(null)
@@ -246,15 +249,28 @@ export function ZKOnboarding() {
             {/* Main ZK Registry Card */}
             <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
                 <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 className="text-2xl font-pixel text-primary">ZK Proof Registry</h2>
-                        <p className="text-muted-foreground text-sm">
-                            Build your verifiable reputation through ZK proofs
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <Logo className="h-12 w-12" />
+                        <div>
+                            <h2 className="text-2xl font-pixel text-primary">ZK Proof Registry</h2>
+                            <p className="text-muted-foreground text-sm">
+                                Build your verifiable reputation through ZK proofs
+                            </p>
+                        </div>
                     </div>
-                    <Badge variant="outline" className="font-pixel text-lg px-4 py-2">
-                        {credentials.reputation_tier.toUpperCase()}
-                    </Badge>
+                    <div className="text-right">
+                        <Badge variant="outline" className="font-pixel text-lg px-4 py-2 mb-2">
+                            {credentials.reputation_tier.toUpperCase()}
+                        </Badge>
+                        <div className="text-xs text-muted-foreground">
+                            {/* Show ENS name with priority, wallet as fallback */}
+                            {address && (
+                                <span className="font-mono">
+                                    {displayName}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Progress Bar */}
@@ -357,7 +373,7 @@ export function ZKOnboarding() {
                                     const hasGithub = credentials.github_username && credentials.github_score === 0
                                     const hasAcademic = (credentials.has_degree || credentials.has_certification) && credentials.education_score === 0
 
-                                    let proofMessage = '🏆 ETHEREUM FOUNDATION zkPDF\n\nGenerating zero-knowledge proofs for available credentials:\n'
+                                    let proofMessage = '🏆 ZK PROOF SYSTEM\n\nGenerating zero-knowledge proofs for available credentials:\n'
                                     if (hasGithub) proofMessage += '✓ GitHub contributions (OAuth verification)\n'
                                     if (hasAcademic) proofMessage += '✓ Academic credentials (PDF re-upload required)\n'
                                     proofMessage += '\nThis process preserves your privacy while proving qualifications.'
@@ -745,7 +761,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
             formData.append('walletAddress', walletAddress)
 
             setZkProofStatus('generating')
-            console.log('🏆 ETHEREUM FOUNDATION: Generating zkPDF-based ZK proof...')
+            console.log('🏆 ZK PROOF SYSTEM: Generating zkPDF-based ZK proof...')
 
             // Use clean zkPDF academic API endpoint with timeout
             const controller = new AbortController()
@@ -776,8 +792,8 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                 setZkProofStatus('complete')
 
                 // Show success message with OFFICIAL zkPDF details
-                alert(`🏆 ETHEREUM FOUNDATION - Official zkPDF Proof Generated!\n\n` +
-                    `✅ Track: ${result.hackathonTrack}\n` +
+                alert(`🏆 ZK PROOF SYSTEM - Official zkPDF Proof Generated!\n\n` +
+                    `✅ Privacy: Zero-Knowledge Verified\n` +
                     `✅ zkPDF Compliant: ${result.zkpdfCompliant ? 'YES ✓' : 'NO ✗'}\n` +
                     `✅ Proof Type: ${result.zkpdfProof.proofType}\n` +
                     `✅ Reputation Score: ${result.zkpdfProof.reputationScore} points\n` +
@@ -789,7 +805,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                     `• Signature Valid: ${result.zkpdfProof.circuitProof.signature_valid ? 'VERIFIED' : 'FAILED'}\n` +
                     `• Message Digest: ${result.zkpdfProof.circuitProof.messageDigestHash.slice(0, 8).join('')}...\n` +
                     `• Nullifier: ${result.zkpdfProof.circuitProof.nullifier.slice(0, 8).join('')}...\n\n` +
-                    `🎯 Ready for Ethereum Foundation Judging!`
+                    `🎯 Zero-Knowledge Reputation Verified!`
                 )
 
                 onUpdate()

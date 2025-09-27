@@ -1,88 +1,229 @@
-HackerRep - Decentralized Reputation System
+# 🔒 HackerRep: Zero-Knowledge Reputation Protocol
 
-## Overview
+> **Privacy-First Reputation System • Zero-Knowledge Verified Credentials**
 
-HackerRep is a decentralized reputation system for hackers and developers, built on Web3. Users connect their wallet, fetch their ENS name (or use a wallet fallback), and build reputation through verified in-person connections and voting.
+![HackerRep Logo](public/hacker-rep-logo.png)
 
-## User Flow
+HackerRep is a revolutionary privacy-preserving reputation system that allows developers and hackers to build verifiable credentials without revealing sensitive personal information. Using cutting-edge **zkPDF technology**, users can prove their skills, education, and experience through zero-knowledge proofs.
 
-1. **User visits platform**
-2. **Connects wallet** (RainbowKit)
-3. **ENS name fetched** (if available, else wallet fallback)
-4. **Auto-registers in Supabase DB**
-5. **User can search for other hackers by ENS name, display name, or wallet address**
-6. **Send connection request** (verifies physical interaction)
-7. **Target user sees pending request, can accept/reject**
-8. **Once accepted, connection is established**
-9. **Users can upvote (+5) or downvote (-3) each other based on interaction**
-10. **Leaderboard and activity feed update in real time**
+## 🎯 Project Vision
 
-## Connection Verification Options
+Transform how reputation is built and verified in the developer community by:
+- **Privacy-First**: Never expose personal details while proving credentials
+- **Verifiable**: Cryptographically prove skills without revealing source documents  
+- **Decentralized**: ENS integration for web3-native identity
+- **Social**: Peer voting system for community-driven reputation
 
-- **ENS-based search and verify** (default, most used)
-- **zkProof** (future, advanced privacy)
-- **Worldcoin/3Box API** (optional, easier but less secure)
-- **NFC wristband (ETHGlobal event)** (most secure, limited to event attendees)
+## ⚡ Core Features
 
-## Project Structure
+### 🔐 **Phase 1: Zero-Knowledge Credential System** *(COMPLETE)*
 
-- **Next.js 14 + TypeScript + Tailwind CSS** (pixel cyberpunk theme)
-- **RainbowKit + wagmi + viem** (wallet/ENS integration)
-- **Supabase PostgreSQL** (users, activities, connection_requests, votes)
-- **Custom pixel UI components**
+#### **Academic Verification**
+- Upload degree certificates and academic documents
+- Generate zkPDF proofs to verify education without revealing personal details
+- **Scoring**: 0-300 points based on degree level and certifications
+- **Privacy**: Student names, addresses, and sensitive data remain hidden
 
-## What We Did In Each Phase (Commit History)
+#### **GitHub Skills Verification** 
+- Connect GitHub account via OAuth integration
+- Generate zkPDF proofs of repository activity and contributions
+- **Scoring**: 0-200 points based on repository quality and activity
+- **Privacy**: Repository content and private information protected
 
-### Phase 1: Project Setup
-- Next.js app initialized
-- Tailwind CSS and pixel theme configured
-- Supabase DB schema created
+#### **Reputation Tiers**
+- **Newcomer** (0 points): Just getting started
+- **Student** (50-149 points): Basic credentials verified
+- **Developer** (150-299 points): Solid development skills
+- **Senior Developer** (300-499 points): Experienced professional
+- **Blockchain Expert** (500+ points): Elite tier recognition
 
-### Phase 2: Wallet & ENS Integration, Database & API Layer
-- RainbowKit wallet connect added
-- ENS resolution logic (fallback to wallet)
-- Auto-register user on connect
-- User registration API
-- Supabase client setup
-- Activities, connections, votes API endpoints
-- Search page for finding hackers
-- Connection request workflow (send)
+#### **Level System**
+- **Level 0: Newcomer** - No zkPDF proofs generated
+- **Level 1: ZK Verified** - At least 50 points from zkPDF proofs ✅
 
-### Phase 4: ZK Credentials & Reputation System (Current)
-- ZK proof registry for education certificates
-- Reputation scoring (0-600 points: Education + GitHub + Social)
-- Auto-calculated reputation tiers (newcomer → student → developer → senior-dev → blockchain-expert)
-- ENS dynamic subname system (student.alice.eth, dev.alice.eth, etc.)
-- ZK onboarding flow with PDF upload simulation
+### 🗳️ **Phase 2: Social Reputation Layer** *(IN DEVELOPMENT)*
 
+#### **Peer Voting System**
+- Community members can upvote/downvote each other
+- **Self Protocol Integration**: Advanced social reputation mechanics
+- Vote-based reputation modifiers on top of zkPDF base scores
+- **Anti-gaming**: Sophisticated mechanisms to prevent manipulation
 
-## Key Files
+#### **Enhanced Features**
+- Real-time activity feed of ZK proof generation
+- ENS-based leaderboards with wallet fallback
+- Social reputation combines with zkPDF scores
+- Advanced analytics and reputation tracking
 
-### Core App
-- `/app/page.tsx` - Homepage with ZK onboarding flow
-- `/app/search/page.tsx` - Search and connect UI
-- `/components/AutoRegister.tsx` - ENS onboarding logic
-- `/components/ZKOnboarding.tsx` - ZK proof registry UI
+## 🚀 Technology Stack
 
-### API Routes
-- `/app/api/users/register/route.ts` - User registration logic
-- `/app/api/zk-credentials/[walletAddress]/route.ts` - ZK credentials management
-- `/app/api/zk-proofs/generate/route.ts` - ZK proof generation API
-- `/app/api/activities/route.ts` - Activity feed API
-- `/app/api/connections/request/route.ts` - Connection request API
-- `/app/api/users/search/route.ts` - User search API
-- `/app/api/stats/route.ts` - Platform stats API
+### **Frontend**
+- **Next.js 14.2.16** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling with custom pixel theme
+- **RainbowKit + Wagmi** - Web3 wallet integration
+- **Pixel UI Design** - Retro gaming aesthetic with modern UX
 
-### Database & Setup
-- `/database-complete.sql` - **Main DB schema (run this once in Supabase)**
-- `/zk-credentials-only.sql` - Incremental ZK setup for existing DBs
-- `/DATABASE-SETUP.md` - Setup instructions for developers
-- `/lib/supabase.ts` - Supabase client/types
+### **Backend & Database**
+- **Supabase** - PostgreSQL database with real-time subscriptions
+- **Next.js API Routes** - Serverless API endpoints
+- **GitHub OAuth** - Secure repository access
 
-### Scripts (Optional)
-- `/scripts/setup-db.ts` - Database connectivity tester
-- `/scripts/setup-zk-database.ts` - ZK table connectivity tester
+### **Zero-Knowledge Technology**
+- **[zkPDF Library](https://privacy-ethereum.github.io/zkpdf/docs/introduction.html)** - Official circuit implementation
+- **Noble Crypto Libraries** - Cryptographic primitives
+- **PDF Processing** - Secure document parsing and verification
+
+### **Blockchain Integration**
+- **Ethereum** - Primary network support
+- **ENS (Ethereum Name Service)** - Decentralized identity
+- **Web3 Wallet Support** - MetaMask, WalletConnect, and more
+
+## 🎮 User Journey
+
+### **1. Connect Wallet**
+```
+User connects Ethereum wallet → Auto-registration → Profile created
+```
+
+### **2. Generate ZK Credentials**
+```
+Upload Academic Documents → Generate zkPDF Proof → Earn 50-300 points
+Connect GitHub Account → Generate zkPDF Proof → Earn 0-200 points
+```
+
+### **3. Build Reputation**
+```
+Reach Level 1 (50+ points) → Unlock social features → Earn peer votes
+```
+
+### **4. Climb Leaderboard** 
+```
+Increase reputation → Higher tier → Better ENS recognition → Community status
+```
+
+## 🔍 Zero-Knowledge Proof System
+
+### **Academic Credentials**
+1. **Upload**: User uploads degree/certification PDFs
+2. **Parse**: System extracts relevant data (institution, degree type, etc.)
+3. **Generate**: zkPDF circuit creates zero-knowledge proof
+4. **Verify**: Proof validates credentials without exposing personal data
+5. **Store**: Commitment and nullifier stored on-chain/database
+
+### **Privacy Guarantees**
+- ✅ **Student names and personal info** → Hidden via ZK commitments
+- ✅ **Repository contents** → Only activity patterns proven
+- ✅ **Document contents** → Only relevant credentials verified
+- ✅ **Nullifiers** → Prevent proof reuse and double-spending
+
+## 🛠️ Development Setup
+
+### **Prerequisites**
+- Node.js 18+ 
+- pnpm or npm
+- Supabase account
+- GitHub OAuth App
+
+### **Installation**
+```bash
+# Clone repository
+git clone https://github.com/devhb1/HackerRep.git
+cd HackerRep
+
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Fill in your Supabase and GitHub credentials
+
+# Run development server
+pnpm dev
+```
+
+## 🎯 Roadmap
+
+### ✅ **Phase 1: ZK Credential Foundation** *(COMPLETE)*
+- [x] zkPDF academic proof generation
+- [x] GitHub skill verification  
+- [x] Reputation scoring system
+- [x] Tier-based progression
+- [x] ENS integration
+- [x] Leaderboard system
+
+### 🔄 **Phase 2: Social Reputation Layer** *(IN PROGRESS)*
+- [ ] Peer voting system implementation
+- [ ] Self Protocol integration
+- [ ] Advanced anti-gaming mechanisms
+- [ ] Enhanced activity feeds
+- [ ] Social analytics dashboard
+
+## 🏆 Live Demo
+
+**🌐 Production**: [https://hacker-rep.vercel.app](https://hacker-rep.vercel.app)
+
+### **Try It Out**
+1. Connect your Ethereum wallet
+2. Upload an academic document or connect GitHub
+3. Generate your first zkPDF proof
+4. See your reputation score and tier
+5. Explore the leaderboard
+
+## 🤝 Contributing
+
+We welcome contributions to HackerRep! Here's how to get involved:
+
+### **Development**
+```bash
+# Fork the repository
+# Create feature branch
+git checkout -b feature/amazing-feature
+
+# Make changes and commit
+git commit -m "Add amazing feature"
+
+# Push and create Pull Request  
+git push origin feature/amazing-feature
+```
+
+### **Areas for Contribution**
+- 🔐 **zkPDF Integration**: Enhance proof generation
+- 🎨 **UI/UX**: Improve pixel design and user experience  
+- 🧠 **Algorithm**: Reputation scoring improvements
+- 🔒 **Security**: Audit smart contracts and proofs
+- 📚 **Documentation**: Improve guides and tutorials
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+## 🛡️ Security
+
+### **Security Features**
+- zkPDF proofs prevent credential forgery
+- Nullifiers prevent proof reuse
+- OAuth integration secures GitHub access
+- Environment variable protection
+- Input validation and sanitization
+
+## 🙏 Acknowledgments
+
+- **[zkPDF Team](https://privacy-ethereum.github.io/zkpdf/)** - For the incredible zero-knowledge PDF verification technology
+- **Ethereum Foundation** - For supporting privacy-preserving technologies
+- **Supabase** - For the excellent database and API infrastructure
+- **Vercel** - For seamless deployment and hosting
+- **Open Source Community** - For the amazing tools and libraries
 
 ---
-For questions, open an issue or DM @devhb1
+
+<div align="center">
+
+**🔒 Privacy-First Reputation Protocol • ⚡ Powered by zkPDF Technology**
+
+Made with  🔥 by the Devhb
+
+[Website](https://hacker-rep.vercel.app) • [GitHub](https://github.com/devhb1/HackerRep) • [Contact](mailto:hello@hackerrep.dev)
+
+</div>
  

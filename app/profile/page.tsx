@@ -89,7 +89,7 @@ export default function ProfilePage() {
         <section className="pixel-border bg-card p-6">
           <h2 className="font-pixel text-primary mb-4 flex items-center gap-2">
             🔐 zkPDF Reputation
-            <span className="text-xs text-muted-foreground">(Ethereum Foundation Hackathon)</span>
+            <span className="text-xs text-muted-foreground">(ZK Proof Verified)</span>
           </h2>
           <div className="grid md:grid-cols-4 gap-4 mb-4">
             <div className="text-center">

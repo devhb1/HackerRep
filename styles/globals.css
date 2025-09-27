@@ -119,7 +119,202 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom animations for dynamic UI */
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgb(34 197 94), 0 0 10px rgb(34 197 94), 0 0 15px rgb(34 197 94);
+  }
+
+  50% {
+    box-shadow: 0 0 10px rgb(34 197 94), 0 0 20px rgb(34 197 94), 0 0 30px rgb(34 197 94);
+  }
+}
+
+@keyframes matrix-rain {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes zkproof-scan {
+  0% {
+    transform: scaleX(0);
+  }
+
+  50% {
+    transform: scaleX(1);
+  }
+
+  100% {
+    transform: scaleX(0) translateX(100%);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-matrix-rain {
+  animation: matrix-rain 10s linear infinite;
+}
+
+.animate-zkproof-scan {
+  animation: zkproof-scan 2s ease-in-out infinite;
+}
+
+/* Pixel effects */
+.pixel-border {
+  border: 2px solid;
+  border-image: linear-gradient(45deg, #00ff88, #0088ff, #ff0088) 1;
+  position: relative;
+}
+
+.pixel-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #00ff88, #0088ff, #ff0088);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.3;
+  filter: blur(8px);
+  transition: opacity 0.3s ease;
+}
+
+.pixel-border:hover::before {
+  opacity: 0.6;
+}
+
+/* ZK Proof loading effect */
+.zkproof-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.zkproof-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.3), transparent);
+  animation: zkproof-scan 2s ease-in-out infinite;
+}
+
+/* Matrix background effect */
+.matrix-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.matrix-bg::before {
+  content: '1010001011010110101001010110';
+  position: absolute;
+  top: -50px;
+  left: 10%;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: rgba(0, 255, 136, 0.1);
+  animation: matrix-rain 8s linear infinite;
+  animation-delay: 0s;
+}
+
+.matrix-bg::after {
+  content: '1100101010011010101101001010';
+  position: absolute;
+  top: -50px;
+  left: 80%;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: rgba(0, 136, 255, 0.1);
+  animation: matrix-rain 12s linear infinite;
+  animation-delay: 3s;
+}
+
+/* Slow bounce animation for feature icons */
+@keyframes bounce-slow {
+
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-10px);
+  }
+
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s infinite;
 }
