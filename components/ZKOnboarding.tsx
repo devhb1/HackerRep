@@ -132,8 +132,8 @@ export function ZKOnboarding() {
             
             if (response.ok) {
                 alert(`🎉 ZK Proof Reputation Generated!\n\n` +
-                    `✅ Education Score: ${credentials.education_score} points\n` +
-                    `✅ GitHub Score: ${credentials.github_score} points\n` +
+                    `✅ Academic Reputation: ${credentials.education_score} points\n` +
+                    `✅ Developer Reputation: ${credentials.github_score} points\n` +
                     `✅ Total Base Reputation: ${finalScore} points\n` +
                     `✅ Reputation Tier: ${getReputationTier(finalScore)}\n\n` +
                     `🔒 Your ZK proof is complete! Now build social reputation through peer connections and votes.`)
@@ -755,6 +755,11 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                     <p className="text-sm text-muted-foreground mt-1">
                         Score earned: {credentials.education_score} / 300 points
                     </p>
+                    {credentials.github_username && (
+                        <p className="text-xs text-blue-600 mt-2">
+                            ✅ Both credentials connected! Generate your ZK proof reputation now
+                        </p>
+                    )}
                 </div>
             )}
         </div>
@@ -822,6 +827,11 @@ function GitHubStep({ credentials, onUpdate, walletAddress }: { credentials: ZKC
                     <p className="text-sm text-muted-foreground mt-1">
                         @{credentials.github_username} • Score: {credentials.github_score} / 200 points
                     </p>
+                    {!credentials.has_degree && !credentials.has_certification && (
+                        <p className="text-xs text-blue-600 mt-2">
+                            ✅ Now complete your academic credentials to generate your ZK proof reputation
+                        </p>
+                    )}
                 </div>
             )}
         </div>
