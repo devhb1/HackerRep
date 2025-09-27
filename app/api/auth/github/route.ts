@@ -134,88 +134,70 @@ export async function GET(request: NextRequest) {
             console.error('❌ Failed to call zkPDF proof API')
         }
 
-        // Update ZK credentials with GitHub data
+        // Update ZK credentials with GitHub data - SIMPLIFIED APPROACH
         try {
-            console.log('🔄 Attempting to update ZK credentials...')
+            console.log('🔄 Updating ZK credentials with GitHub data...')
+            console.log('Wallet:', walletAddress.toLowerCase())
+            console.log('GitHub username:', githubUser.login)
+            console.log('GitHub score:', githubScore)
             
-            // First, ensure the zk_credentials record exists
-            const { data: existingCredentials, error: fetchError } = await supabase
-                .from('zk_credentials')
-                .select('*')
-                .eq('wallet_address', walletAddress.toLowerCase())
-                .single()
-
-            if (fetchError && fetchError.code === 'PGRST116') {
-                // Create new record if it doesn't exist
-                console.log('Creating new ZK credentials record...')
-                const { error: createError } = await supabase
-                    .from('zk_credentials')
-                    .insert({
-                        wallet_address: walletAddress.toLowerCase(),
-                        education_score: 0,
-                        github_score: 0,
-                        social_score: 0,
-                        completed_onboarding: false,
-                        has_degree: false,
-                        has_certification: false,
-                        github_username: null
-                    })
-                
-                if (createError) {
-                    console.error('Failed to create ZK credentials record:', createError)
-                }
-            }
-
-            // Now update with GitHub data
+            // Simple direct update - this should work
             const { data: updatedCredentials, error: updateError } = await supabase
                 .from('zk_credentials')
-                .upsert({
-                    wallet_address: walletAddress.toLowerCase(),
+                .update({
                     github_score: githubScore,
                     github_username: githubUser.login,
                     github_data: JSON.stringify({
                         totalCommits: statsData.totalCommits,
                         publicRepos: statsData.publicRepos,
                         languages: statsData.languages,
-                        connectedAt: new Date().toISOString(),
-                        zkProofId: zkProofResult?.proof?.proofId || null
+                        connectedAt: new Date().toISOString()
                     }),
-                    github_proofs: JSON.stringify([{
-                        proofId: zkProofResult?.proof?.proofId || 'fallback_' + Date.now(),
-                        username: githubUser.login,
-                        timestamp: new Date().toISOString(),
-                        reputationScore: githubScore,
-                        isZkPdfProof: !!zkProofResult?.success
-                    }])
+                    updated_at: new Date().toISOString()
                 })
+                .eq('wallet_address', walletAddress.toLowerCase())
                 .select()
                 .single()
 
             if (updateError) {
-                console.error('Failed to update GitHub credentials:', updateError)
-                // Try a simpler update
-                const { error: simpleError } = await supabase
-                    .from('zk_credentials')
-                    .upsert({
-                        wallet_address: walletAddress.toLowerCase(),
-                        github_score: githubScore,
-                        github_username: githubUser.login
-                    })
+                console.error('❌ Failed to update GitHub credentials:', updateError)
                 
-                if (simpleError) {
-                    console.error('Simple update also failed:', simpleError)
+                // Try creating a new record if update fails
+                console.log('🔄 Trying to create new record...')
+                const { data: newCredentials, error: createError } = await supabase
+                    .from('zk_credentials')
+                    .insert({
+                        wallet_address: walletAddress.toLowerCase(),
+                        education_score: 0,
+                        github_score: githubScore,
+                        social_score: 0,
+                        github_username: githubUser.login,
+                        github_data: JSON.stringify({
+                            totalCommits: statsData.totalCommits,
+                            publicRepos: statsData.publicRepos,
+                            languages: statsData.languages,
+                            connectedAt: new Date().toISOString()
+                        }),
+                        completed_onboarding: false,
+                        has_degree: false,
+                        has_certification: false
+                    })
+                    .select()
+                    .single()
+                
+                if (createError) {
+                    console.error('❌ Failed to create new record:', createError)
                 } else {
-                    console.log('✅ Simple GitHub credentials update successful')
+                    console.log('✅ Created new ZK credentials record with GitHub data')
                 }
             } else {
-                console.log('✅ ZK credentials updated successfully')
+                console.log('✅ Successfully updated ZK credentials with GitHub data')
+                console.log('Updated credentials:', updatedCredentials)
             }
         } catch (dbError) {
-            console.error('Database update failed:', dbError)
+            console.error('❌ Database update failed:', dbError)
             console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing')
             console.error('Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing')
-            // Don't fail the entire flow, just log the error
-            console.log('⚠️ Database update failed, but continuing with GitHub connection...')
         }
 
         // Redirect back to homepage with success message and refresh credentials
