@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
 
         // Update ZK credentials with GitHub data (for backward compatibility)
         try {
+            console.log('🔄 Attempting to update ZK credentials...')
             const { data: updatedCredentials, error: updateError } = await supabase
                 .from('zk_credentials')
                 .upsert({
@@ -176,21 +177,22 @@ export async function GET(request: NextRequest) {
                     
                     if (fallbackError) {
                         console.error('Fallback update also failed:', fallbackError)
-                        throw new Error('Database connection issue - please try again later')
+                        // Don't throw error, just log and continue
+                        console.log('⚠️ Database update failed, but continuing with GitHub connection...')
                     }
                 } else {
-                    throw updateError
+                    // Don't throw error, just log and continue
+                    console.log('⚠️ Database update failed, but continuing with GitHub connection...')
                 }
+            } else {
+                console.log('✅ ZK credentials updated successfully')
             }
         } catch (dbError) {
             console.error('Database update failed:', dbError)
             console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing')
             console.error('Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing')
-            // Still redirect but with more specific error info
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
-            const errorMessage = dbError instanceof Error ? dbError.message : 'Database connection failed'
-            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=${encodeURIComponent(errorMessage)}`
-            return NextResponse.redirect(errorUrl)
+            // Don't fail the entire flow, just log the error
+            console.log('⚠️ Database update failed, but continuing with GitHub connection...')
         }
 
         // Redirect back to homepage with success message
