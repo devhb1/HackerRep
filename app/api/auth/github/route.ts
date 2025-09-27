@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import crypto from 'crypto'
 
 // GET /api/auth/github - Initiate GitHub OAuth
 export async function GET(request: NextRequest) {
@@ -11,7 +10,7 @@ export async function GET(request: NextRequest) {
     if (!code) {
         // Get wallet address from request headers or query params
         const walletAddress = request.headers.get('x-wallet-address') || request.nextUrl.searchParams.get('wallet')
-        
+
         if (!walletAddress) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 })
         }
@@ -23,7 +22,7 @@ export async function GET(request: NextRequest) {
         const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/auth/github`
         const scope = 'read:user user:email'
         // Include wallet address in state for callback
-        const stateParam = crypto.createHash('sha256').update(walletAddress + Date.now().toString()).digest('hex')
+        const stateParam = btoa(walletAddress + '_' + Date.now().toString()).replace(/[+/=]/g, '')
 
         const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${stateParam}`
 
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
     try {
         // Get wallet address from state or query params
         const walletAddress = request.nextUrl.searchParams.get('wallet')
-        
+
         if (!walletAddress) {
             throw new Error('Wallet address not found in callback')
         }
@@ -76,13 +75,38 @@ export async function GET(request: NextRequest) {
         // Get GitHub stats
         const statsData = await getGitHubStats(githubUser.login, tokenData.access_token)
 
-        // Generate ZK proof for GitHub data
-        const zkProofHash = generateGitHubZKProof(githubUser, statsData)
+        // 🏆 ETHEREUM FOUNDATION: Generate zkPDF-based ZK proof for GitHub credentials
+        console.log('🏆 Generating GitHub zkPDF proof for:', githubUser.login)
 
-        // Calculate score based on GitHub activity
-        const githubScore = calculateGitHubScore(statsData)
+        // Use GitHub zkPDF API to generate proof
+        const zkProofResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-proofs/github-clean`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                walletAddress: walletAddress,
+                githubUsername: githubUser.login,
+                githubStats: statsData
+            })
+        })
 
-        // Update ZK credentials with GitHub data
+        let zkProofResult
+        let githubScore = calculateGitHubScore(statsData) // fallback score
+
+        if (zkProofResponse.ok) {
+            zkProofResult = await zkProofResponse.json()
+            if (zkProofResult.success) {
+                githubScore = zkProofResult.scoreAwarded
+                console.log('✅ GitHub zkPDF proof generated successfully!')
+            } else {
+                console.error('❌ GitHub zkPDF proof generation failed:', zkProofResult.error)
+            }
+        } else {
+            console.error('❌ Failed to call zkPDF proof API')
+        }
+
+        // Update ZK credentials with GitHub data (for backward compatibility)
         const { data: updatedCredentials, error: updateError } = await supabase
             .from('zk_credentials')
             .upsert({
@@ -93,12 +117,15 @@ export async function GET(request: NextRequest) {
                     totalCommits: statsData.totalCommits,
                     publicRepos: statsData.publicRepos,
                     languages: statsData.languages,
-                    connectedAt: new Date().toISOString()
+                    connectedAt: new Date().toISOString(),
+                    zkProofId: zkProofResult?.proof?.proofId || null
                 }),
                 github_proofs: JSON.stringify([{
-                    hash: zkProofHash,
+                    proofId: zkProofResult?.proof?.proofId || 'fallback_' + Date.now(),
                     username: githubUser.login,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    reputationScore: githubScore,
+                    isZkPdfProof: !!zkProofResult?.success
                 }])
             })
             .select()
@@ -121,7 +148,8 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('GitHub OAuth error:', error)
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
-        const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=true`
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=${encodeURIComponent(errorMessage)}`
         return NextResponse.redirect(errorUrl)
     }
 }
@@ -141,25 +169,51 @@ export async function POST(request: NextRequest) {
         // Get fresh GitHub stats
         const githubStats = await getGitHubStats(githubUsername, accessToken)
         const calculatedScore = calculateGitHubScore(githubStats)
-        const zkProofHash = generateGitHubZKProof({ login: githubUsername }, githubStats)
+
+        // 🏆 ETHEREUM FOUNDATION: Generate zkPDF-based ZK proof for GitHub credentials
+        const zkProofResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-proofs/github`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                walletAddress: walletAddress,
+                githubUsername: githubUsername,
+                githubStats: githubStats
+            })
+        })
+
+        let finalScore = calculatedScore
+        let zkProofId = null
+
+        if (zkProofResponse.ok) {
+            const zkProofResult = await zkProofResponse.json()
+            if (zkProofResult.success) {
+                finalScore = zkProofResult.scoreAwarded
+                zkProofId = zkProofResult.zkProof.proofId
+            }
+        }
 
         // Update ZK credentials
         const { data: updatedCredentials, error: updateError } = await supabase
             .from('zk_credentials')
             .upsert({
                 wallet_address: walletAddress.toLowerCase(),
-                github_score: calculatedScore,
+                github_score: finalScore,
                 github_username: githubUsername,
                 github_data: JSON.stringify({
                     totalCommits: githubStats.totalCommits,
                     publicRepos: githubStats.publicRepos,
                     languages: githubStats.languages,
-                    connectedAt: new Date().toISOString()
+                    connectedAt: new Date().toISOString(),
+                    zkProofId: zkProofId
                 }),
                 github_proofs: JSON.stringify([{
-                    hash: zkProofHash,
+                    proofId: zkProofId || 'fallback_' + Date.now(),
                     username: githubUsername,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    reputationScore: finalScore,
+                    isZkPdfProof: !!zkProofId
                 }])
             })
             .select()
@@ -297,10 +351,4 @@ function calculateGitHubScore(stats: {
 
     // Cap at 200 points max
     return Math.min(score, 200)
-}
-
-function generateGitHubZKProof(githubUser: any, stats: any): string {
-    const timestamp = Date.now()
-    const proofData = `github:${githubUser.login}:${stats.totalCommits}:${stats.publicRepos}:${timestamp}`
-    return crypto.createHash('sha256').update(proofData).digest('hex')
 }

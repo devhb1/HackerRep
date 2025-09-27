@@ -61,9 +61,12 @@ CREATE TABLE IF NOT EXISTS zk_credentials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_address VARCHAR(42) UNIQUE NOT NULL,
     
-    -- Score breakdowns (0-600 total possible)
-    education_score INTEGER DEFAULT 0 CHECK (education_score >= 0 AND education_score <= 300),
+    -- zkPDF-based ZK Proof Reputation Scores (0-500 total possible)
+    -- Academic credentials verified via zkPDF proof generation from uploaded PDF certificates
+    education_score INTEGER DEFAULT 0 CHECK (education_score >= 0 AND education_score <= 200),
+    -- GitHub contributions verified via zkPDF proof generation from OAuth-connected GitHub stats  
     github_score INTEGER DEFAULT 0 CHECK (github_score >= 0 AND github_score <= 200), 
+    -- Social reputation from peer voting (future implementation)
     social_score INTEGER DEFAULT 0 CHECK (social_score >= 0 AND social_score <= 100),
     total_base_score INTEGER GENERATED ALWAYS AS (education_score + github_score + social_score) STORED,
     
@@ -72,16 +75,19 @@ CREATE TABLE IF NOT EXISTS zk_credentials (
     has_certification BOOLEAN DEFAULT FALSE,
     github_username TEXT,
     
-    -- ZK proof storage (JSONB for flexibility)
+    -- zkPDF ZK Proof Storage (JSONB for flexibility)
+    -- Stores academic ZK proofs with commitments/nullifiers from PDF certificate verification
     education_proofs JSONB DEFAULT '[]'::jsonb,
+    -- Stores GitHub ZK proofs with commitments/nullifiers from OAuth GitHub stats verification
     github_proofs JSONB DEFAULT '[]'::jsonb,
+    -- Raw GitHub stats for reference (commits, repos, languages, etc.)
     github_data JSONB DEFAULT '{}'::jsonb,
     
-    -- Reputation tier (auto-calculated)
+    -- zkPDF Reputation tier (auto-calculated from ZK-verified scores)
     reputation_tier TEXT GENERATED ALWAYS AS (
         CASE 
-            WHEN (education_score + github_score + social_score) >= 600 THEN 'blockchain-expert'
-            WHEN (education_score + github_score + social_score) >= 400 THEN 'senior-dev' 
+            WHEN (education_score + github_score + social_score) >= 500 THEN 'blockchain-expert'
+            WHEN (education_score + github_score + social_score) >= 300 THEN 'senior-dev' 
             WHEN (education_score + github_score + social_score) >= 200 THEN 'developer'
             WHEN (education_score + github_score + social_score) >= 100 THEN 'student'
             ELSE 'newcomer'
