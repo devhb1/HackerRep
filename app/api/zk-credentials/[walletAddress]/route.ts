@@ -83,8 +83,8 @@ export async function GET(
     }
 }
 
-// PUT /api/zk-credentials/[walletAddress] - Update credentials
-export async function PUT(
+// POST /api/zk-credentials/[walletAddress] - Update credentials (including final reputation generation)
+export async function POST(
     request: NextRequest,
     { params }: { params: { walletAddress: string } }
 ) {
@@ -116,6 +116,26 @@ export async function PUT(
                 { error: 'Failed to update credentials' },
                 { status: 500 }
             )
+        }
+
+        // If this is a final reputation generation, also update the main users table
+        if (updates.completed_onboarding && updates.total_base_score) {
+            try {
+                const { error: userUpdateError } = await supabase
+                    .from('users')
+                    .update({
+                        reputation: updates.total_base_score,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('wallet_address', walletAddress.toLowerCase())
+
+                if (userUpdateError) {
+                    console.error('Failed to update main user reputation:', userUpdateError)
+                    // Don't fail the request, just log the error
+                }
+            } catch (error) {
+                console.error('Error updating main user table:', error)
+            }
         }
 
         return NextResponse.json({ credentials: updatedCredentials })

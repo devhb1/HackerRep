@@ -127,35 +127,59 @@ export async function GET(request: NextRequest) {
         }
 
         // Update ZK credentials with GitHub data (for backward compatibility)
-        const { data: updatedCredentials, error: updateError } = await supabase
-            .from('zk_credentials')
-            .upsert({
-                wallet_address: walletAddress.toLowerCase(),
-                github_score: githubScore,
-                github_username: githubUser.login,
-                github_data: JSON.stringify({
-                    totalCommits: statsData.totalCommits,
-                    publicRepos: statsData.publicRepos,
-                    languages: statsData.languages,
-                    connectedAt: new Date().toISOString(),
-                    zkProofId: zkProofResult?.proof?.proofId || null
-                }),
-                github_proofs: JSON.stringify([{
-                    proofId: zkProofResult?.proof?.proofId || 'fallback_' + Date.now(),
-                    username: githubUser.login,
-                    timestamp: new Date().toISOString(),
-                    reputationScore: githubScore,
-                    isZkPdfProof: !!zkProofResult?.success
-                }])
-            })
-            .select()
-            .single()
+        try {
+            const { data: updatedCredentials, error: updateError } = await supabase
+                .from('zk_credentials')
+                .upsert({
+                    wallet_address: walletAddress.toLowerCase(),
+                    github_score: githubScore,
+                    github_username: githubUser.login,
+                    github_data: JSON.stringify({
+                        totalCommits: statsData.totalCommits,
+                        publicRepos: statsData.publicRepos,
+                        languages: statsData.languages,
+                        connectedAt: new Date().toISOString(),
+                        zkProofId: zkProofResult?.proof?.proofId || null
+                    }),
+                    github_proofs: JSON.stringify([{
+                        proofId: zkProofResult?.proof?.proofId || 'fallback_' + Date.now(),
+                        username: githubUser.login,
+                        timestamp: new Date().toISOString(),
+                        reputationScore: githubScore,
+                        isZkPdfProof: !!zkProofResult?.success
+                    }])
+                })
+                .select()
+                .single()
 
-        if (updateError) {
-            console.error('Failed to update GitHub credentials:', updateError)
-            // Still redirect but with error info
+            if (updateError) {
+                console.error('Failed to update GitHub credentials:', updateError)
+                // Check if it's a table/column issue
+                if (updateError.code === 'PGRST116' || updateError.message.includes('relation') || updateError.message.includes('column')) {
+                    console.log('Database schema issue detected, creating fallback record...')
+                    // Try to create a basic record without complex fields
+                    const { error: fallbackError } = await supabase
+                        .from('zk_credentials')
+                        .upsert({
+                            wallet_address: walletAddress.toLowerCase(),
+                            github_score: githubScore,
+                            github_username: githubUser.login
+                        })
+                    
+                    if (fallbackError) {
+                        console.error('Fallback update also failed:', fallbackError)
+                        throw new Error('Database connection issue - please try again later')
+                    }
+                } else {
+                    throw updateError
+                }
+            }
+        } catch (dbError) {
+            console.error('Database update failed:', dbError)
+            // Still redirect but with more specific error info
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hacker-rep.vercel.app'
-            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=update_failed`
+            const errorMessage = dbError instanceof Error ? dbError.message : 'Database connection failed'
+            const errorUrl = `${baseUrl.replace(/\/$/, '')}/?github_error=${encodeURIComponent(errorMessage)}`
             return NextResponse.redirect(errorUrl)
         }
 

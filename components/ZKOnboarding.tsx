@@ -67,6 +67,7 @@ export function ZKOnboarding() {
     const [credentials, setCredentials] = useState<ZKCredentials | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentStep, setCurrentStep] = useState<string | null>(null)
+    const [generatingReputation, setGeneratingReputation] = useState(false)
 
     useEffect(() => {
         if (isConnected && address) {
@@ -100,6 +101,57 @@ export function ZKOnboarding() {
         setLoading(false)
     }
 
+    const generateZKProofReputation = async () => {
+        if (!address || !credentials) return
+        
+        setGeneratingReputation(true)
+        
+        try {
+            console.log('🏆 Generating final ZK proof reputation...')
+            
+            // Calculate final base reputation score
+            const finalScore = credentials.education_score + credentials.github_score
+            
+            // Update the credentials with completed status
+            const response = await fetch(`/api/zk-credentials/${address}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    total_base_score: finalScore,
+                    completed_onboarding: true,
+                    reputation_tier: getReputationTier(finalScore)
+                })
+            })
+            
+            if (response.ok) {
+                alert(`🎉 ZK Proof Reputation Generated!\n\n` +
+                    `✅ Education Score: ${credentials.education_score} points\n` +
+                    `✅ GitHub Score: ${credentials.github_score} points\n` +
+                    `✅ Total Base Reputation: ${finalScore} points\n` +
+                    `✅ Reputation Tier: ${getReputationTier(finalScore)}\n\n` +
+                    `🔒 Your ZK proof is complete! Now build social reputation through peer connections and votes.`)
+                
+                // Refresh credentials
+                fetchCredentials()
+            } else {
+                throw new Error('Failed to generate reputation')
+            }
+        } catch (error) {
+            console.error('Failed to generate ZK proof reputation:', error)
+            alert('❌ Failed to generate ZK proof reputation. Please try again.')
+        }
+        
+        setGeneratingReputation(false)
+    }
+
+    const getReputationTier = (score: number): string => {
+        if (score >= 400) return 'expert'
+        if (score >= 250) return 'senior'
+        if (score >= 150) return 'developer'
+        if (score >= 50) return 'student'
+        return 'newcomer'
+    }
+
     if (!isConnected || loading) {
         return (
             <Card className="p-6">
@@ -131,19 +183,11 @@ export function ZKOnboarding() {
             completed: credentials.github_username !== null,
             score: credentials.github_score,
             maxScore: 200
-        },
-        {
-            id: 'social',
-            title: 'Social Reputation',
-            description: 'Build reputation through peer connections and votes (0-100 points)',
-            icon: Users,
-            completed: credentials.social_score > 0,
-            score: credentials.social_score,
-            maxScore: 100
         }
     ]
 
-    const totalProgress = (credentials.total_base_score / 600) * 100
+    const totalProgress = (credentials.total_base_score / 500) * 100 // Max 500 points (300 education + 200 github)
+    const hasGeneratedBaseReputation = credentials.total_base_score > 0
     const canAccessNetworking = credentials.total_base_score >= 50 // Minimum threshold
 
     return (
@@ -167,7 +211,7 @@ export function ZKOnboarding() {
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium">Base Reputation Score</span>
                         <span className="text-sm font-pixel">
-                            {credentials.total_base_score} / 600
+                            {credentials.total_base_score} / 500
                         </span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-3 pixel-border">
@@ -180,24 +224,24 @@ export function ZKOnboarding() {
                         <span>Newcomer (0)</span>
                         <span>Student (100)</span>
                         <span>Developer (200)</span>
-                        <span>Senior (400)</span>
-                        <span>Expert (600)</span>
+                        <span>Senior (350)</span>
+                        <span>Expert (500)</span>
                     </div>
                 </div>
 
                 {/* Access Status */}
-                {canAccessNetworking ? (
+                {hasGeneratedBaseReputation ? (
                     <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg mb-4">
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <span className="text-sm">
-                            ✅ Networking unlocked! You can now connect with other builders.
+                            ✅ Base reputation generated! Your ZK proof is complete. Now build social reputation through peer connections and votes.
                         </span>
                     </div>
                 ) : (
                     <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-4">
                         <AlertCircle className="h-5 w-5 text-yellow-500" />
                         <span className="text-sm">
-                            📝 Complete your ZK proofs to unlock hackathon networking features.
+                            📝 Complete your academic credentials and GitHub connection, then generate your ZK proof base reputation.
                         </span>
                     </div>
                 )}
@@ -257,15 +301,33 @@ export function ZKOnboarding() {
 
             {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
-                {!canAccessNetworking && (
+                {!hasGeneratedBaseReputation && (
+                    <div className="flex gap-2">
+                        <PixelButton
+                            variant="accent"
+                            onClick={() => setCurrentStep('education')}
+                        >
+                            Add Academic Credentials
+                        </PixelButton>
+                        <PixelButton
+                            variant="accent"
+                            onClick={() => setCurrentStep('github')}
+                        >
+                            Connect GitHub
+                        </PixelButton>
+                    </div>
+                )}
+                {!hasGeneratedBaseReputation && credentials.has_degree && credentials.github_username && (
                     <PixelButton
-                        variant="accent"
-                        onClick={() => setCurrentStep('education')}
+                        variant="primary"
+                        onClick={generateZKProofReputation}
+                        disabled={generatingReputation}
+                        className="text-lg px-8 py-4"
                     >
-                        Start Building Reputation
+                        {generatingReputation ? 'Generating...' : '🏆 Generate ZK Proof Reputation'}
                     </PixelButton>
                 )}
-                {canAccessNetworking && (
+                {hasGeneratedBaseReputation && (
                     <div className="flex gap-2">
                         <PixelButton
                             variant="primary"
@@ -303,8 +365,6 @@ function StepContent({
             return <EducationStep credentials={credentials} onUpdate={onUpdate} walletAddress={walletAddress} />
         case 'github':
             return <GitHubStep credentials={credentials} onUpdate={onUpdate} walletAddress={walletAddress} />
-        case 'social':
-            return <SocialStep credentials={credentials} onUpdate={onUpdate} walletAddress={walletAddress} />
         default:
             return null
     }
@@ -345,6 +405,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
     }
 
     const submitEducationCredential = async () => {
+        // Validate inputs
         if (!selectedDegree || !institution.trim()) {
             alert('Please select a degree type and enter institution name')
             return
@@ -352,6 +413,12 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
         if (!file) {
             alert('Please upload your certificate/diploma')
+            return
+        }
+
+        // Prevent double submission
+        if (uploading || zkProofStatus !== 'idle') {
+            console.log('Already processing, ignoring duplicate submission')
             return
         }
 
@@ -375,17 +442,28 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
             setZkProofStatus('generating')
             console.log('🏆 ETHEREUM FOUNDATION: Generating zkPDF-based ZK proof...')
 
-            // Use clean zkPDF academic API endpoint
+            // Use clean zkPDF academic API endpoint with timeout
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
             const response = await fetch('/api/zk-proofs/academic', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             })
+
+            clearTimeout(timeoutId)
+
+            if (!response.ok) {
+                const errorText = await response.text()
+                throw new Error(`Server error (${response.status}): ${errorText}`)
+            }
 
             const result = await response.json()
 
-            if (response.ok && result.success) {
+            if (result.success) {
                 setZkProofStatus('verifying')
-                setProofDetails(result.proof)
+                setProofDetails(result.zkpdfProof)
 
                 // Small delay to show verification step
                 await new Promise(resolve => setTimeout(resolve, 1500))
@@ -418,17 +496,28 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                 setZkProofStatus('idle')
                 setProofDetails(null)
             } else {
-                throw new Error(result.error || 'zkPDF proof generation failed')
+                throw new Error(result.error || result.details || 'zkPDF proof generation failed')
             }
         } catch (error) {
             console.error('zkPDF proof generation failed:', error)
-            const errorMessage = error instanceof Error ? error.message : 'Please check your certificate and try again'
-            alert(`❌ ZK Proof Generation Failed\n\n${errorMessage}\n\nTips:\n• Ensure PDF contains institution name\n• Check that degree type matches certificate\n• Verify PDF is not corrupted`)
+            let errorMessage = 'Please check your certificate and try again'
+            
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timed out. Please try again with a smaller file.'
+                } else if (error.message.includes('Server error')) {
+                    errorMessage = error.message
+                } else {
+                    errorMessage = error.message
+                }
+            }
+            
+            alert(`❌ ZK Proof Generation Failed\n\n${errorMessage}\n\nTips:\n• Ensure PDF contains institution name\n• Check that degree type matches certificate\n• Verify PDF is not corrupted\n• Try with a smaller file if upload is slow`)
             setZkProofStatus('idle')
             setProofDetails(null)
+        } finally {
+            setUploading(false)
         }
-
-        setUploading(false)
     }
 
     return (
@@ -537,7 +626,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                         />
                         <label htmlFor="certificate-upload" className="cursor-pointer">
                             <div className="inline-block">
-                                <PixelButton variant="muted" type="button">
+                                <PixelButton variant="muted" type="button" className="pointer-events-none">
                                     Choose PDF File
                                 </PixelButton>
                             </div>
@@ -570,8 +659,9 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                             <PixelButton
                                 variant="accent"
                                 onClick={submitEducationCredential}
-                                disabled={uploading || !selectedDegree || !institution || zkProofStatus !== 'idle'}
+                                disabled={uploading || !selectedDegree || !institution.trim() || !file || zkProofStatus !== 'idle'}
                                 className="w-full"
+                                type="button"
                             >
                                 {uploading && zkProofStatus === 'parsing' && 'Parsing PDF...'}
                                 {uploading && zkProofStatus === 'generating' && 'Generating ZK Proof...'}
@@ -640,6 +730,7 @@ function GitHubStep({ credentials, onUpdate, walletAddress }: { credentials: ZKC
                         onClick={connectGitHub}
                         disabled={connecting}
                         className="w-full"
+                        type="button"
                     >
                         {connecting ? 'Connecting...' : 'Connect GitHub Account'}
                     </PixelButton>
@@ -652,42 +743,6 @@ function GitHubStep({ credentials, onUpdate, walletAddress }: { credentials: ZKC
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
                         @{credentials.github_username} • Score: {credentials.github_score} / 200 points
-                    </p>
-                </div>
-            )}
-        </div>
-    )
-}
-
-function SocialStep({ credentials, walletAddress }: { credentials: ZKCredentials, onUpdate: () => void, walletAddress: string }) {
-    return (
-        <div className="space-y-4">
-            <div className="text-sm space-y-2">
-                <p><strong>Build social reputation by:</strong></p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                    <li>Connecting with other builders at hackathons</li>
-                    <li>Receiving upvotes from verified connections</li>
-                    <li>Participating in community discussions</li>
-                    <li>Helping other hackers build their projects</li>
-                </ul>
-            </div>
-
-            {credentials.social_score === 0 ? (
-                <div className="text-center p-6">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="font-medium mb-2">Start networking to build social reputation</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        Complete your ZK proofs first, then connect with other builders to earn social points.
-                    </p>
-                </div>
-            ) : (
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <div className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="font-medium">Social Reputation Active!</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Current score: {credentials.social_score} / 100 points
                     </p>
                 </div>
             )}
