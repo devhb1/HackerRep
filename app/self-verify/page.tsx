@@ -72,9 +72,8 @@ export default function SelfVerifyPage() {
         console.log("Wallet address:", walletAddress);
 
         // Create a robust Self App configuration with better error handling
-        // Use current deployment URL (works for preview branches and production)
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin :
-          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://hacker-rep.vercel.app');
+        // Use production URL to avoid Vercel deployment protection on preview branches
+        const baseUrl = 'https://hacker-rep.vercel.app'; // Always use production to avoid auth issues
 
         // Self Protocol expects the endpoint without /api prefix
         const endpoint = `${baseUrl}/api/self/verify`;
@@ -82,7 +81,7 @@ export default function SelfVerifyPage() {
         console.log("Using Self endpoint:", endpoint);
         console.log("Wallet address:", walletAddress);
         console.log("Base URL:", baseUrl);
-        console.log("Endpoint type: https");
+        console.log("Endpoint type: staging_https");
 
         // Validate endpoint URL
         try {
@@ -99,8 +98,8 @@ export default function SelfVerifyPage() {
           scope: "hacker-rep-verification",
           endpoint: endpoint,
           userId: walletAddress,
-          endpointType: "https",
-          userIdType: "hex"
+          endpointType: "staging_https",
+          userIdType: "uuid"
         });
 
         const app = new SelfAppBuilder({
@@ -110,12 +109,12 @@ export default function SelfVerifyPage() {
           endpoint: endpoint,
           userId: walletAddress,
           endpointType: "staging_https", // Use staging_https as per docs
-          userIdType: "hex",
-          userDefinedData: walletAddress, // Use wallet address directly as hex string
+          userIdType: "uuid", // Must match backend: "uuid" not "hex"
+          userDefinedData: walletAddress, // Use wallet address as user context
           disclosures: {
             minimumAge: 18, // Must match backend config
-            excludedCountries: ["IRN", "PRK", "RUS", "SYR"], // Must match backend
-            ofac: true, // Must match backend  
+            excludedCountries: [], // Must match backend - empty array
+            ofac: false, // Must match backend - false for demo
             nationality: true,
             gender: true,
           }

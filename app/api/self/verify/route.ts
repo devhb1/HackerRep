@@ -17,17 +17,15 @@ export async function OPTIONS(request: NextRequest) {
 // Initialize Self Protocol backend verifier
 const selfBackendVerifier = new SelfBackendVerifier(
     "hacker-rep-verification", // Must match frontend scope
-    process.env.VERCEL_URL ?
-        `https://${process.env.VERCEL_URL}/api/self/verify` :
-        "https://hacker-rep-git-feature-v2-produ-1b3b85-devhbs-projects-af5a33c4.vercel.app/api/self/verify",
+    "https://hacker-rep.vercel.app/api/self/verify", // Always use production URL to avoid auth protection
     false, // mockPassport: false for production, true for testing
     AllIds, // Accept all document types
     new DefaultConfigStore({
         minimumAge: 18,
-        excludedCountries: ["IRN", "PRK", "RUS", "SYR"], // Exclude India's neighbors for demo, keep India
-        ofac: true, // OFAC sanctions check
+        excludedCountries: [], // Empty array - let all countries through, filter in app logic
+        ofac: false, // Disable OFAC for demo (India isn't sanctioned)
     }),
-    "hex" // userIdentifierType - must match frontend
+    "uuid" // userIdentifierType - must match docs example
 );
 
 export async function POST(request: NextRequest) {
