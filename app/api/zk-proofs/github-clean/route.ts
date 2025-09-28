@@ -44,34 +44,21 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: `🐙 GitHub zkPDF-style proof generated! ${zkpdfProof.reputationScore} reputation points earned.`,
+            message: `🐙 GitHub zkPDF proof generated! ${zkpdfProof.reputationScore} reputation points earned.`,
+            scoreAwarded: zkpdfProof.reputationScore,
             zkpdfProof: {
                 proofId: zkpdfProof.proofId,
                 proofType: zkpdfProof.proofType,
-                // zkPDF Circuit Hash (for demo visualization)
-                zkpdfHash: Buffer.from(zkpdfProof.circuitProof.messageDigestHash).toString('hex').substring(0, 16) + '...',
-                zkpdfNullifier: Buffer.from(zkpdfProof.circuitProof.nullifier).toString('hex').substring(0, 16) + '...',
-                circuitProof: {
-                    substringMatches: zkpdfProof.circuitProof.substringMatches,
-                    signature_valid: zkpdfProof.circuitProof.signature_valid,
-                    messageDigestHash: Array.from(zkpdfProof.circuitProof.messageDigestHash),
-                    nullifier: Array.from(zkpdfProof.circuitProof.nullifier)
-                },
                 reputationScore: zkpdfProof.reputationScore,
-                verified: zkpdfProof.verified,
-                createdAt: zkpdfProof.createdAt,
-                expiresAt: zkpdfProof.expiresAt
+                verified: zkpdfProof.verified
             },
-            scoreAwarded: zkpdfProof.reputationScore,
             githubStats: {
                 username: githubUsername,
                 commits: githubStats.totalCommits,
                 repos: githubStats.publicRepos,
                 languages: githubStats.languages.length
             },
-            zkpdfGenerated: true,
-            hackathonTrack: "Ethereum Foundation - Best Applications on General Privacy - zkPDF Credential Sharing",
-            zkpdfCompliant: true
+            zkpdfGenerated: true
         })
 
     } catch (error) {

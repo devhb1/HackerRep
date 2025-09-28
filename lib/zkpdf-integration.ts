@@ -144,20 +144,21 @@ export async function generateGitHubZKPDFProof(
 
     console.log(`🐙 Generating zkPDF-style proof for GitHub: @${githubUsername}`)
 
-    // Calculate reputation score (same logic as before)
-    let reputationScore = 5 // Base score
+    // Simplified reputation scoring 
+    let reputationScore = 25 // Base score for having GitHub
 
-    if (githubStats.totalCommits >= 200) {
-        reputationScore += 150
-    } else if (githubStats.totalCommits >= 50) {
+    // Commits scoring (simplified)
+    if (githubStats.totalCommits >= 100) {
         reputationScore += 75
-    } else if (githubStats.totalCommits >= 10) {
+    } else if (githubStats.totalCommits >= 20) {
+        reputationScore += 50
+    } else if (githubStats.totalCommits >= 5) {
         reputationScore += 25
     }
 
-    // Bonus scoring
-    reputationScore += Math.min(githubStats.publicRepos * 2, 30)
-    reputationScore += Math.min(githubStats.languages.length * 3, 20)
+    // Repos and languages bonus
+    reputationScore += Math.min(githubStats.publicRepos * 3, 50)
+    reputationScore += Math.min(githubStats.languages.length * 5, 25)
     reputationScore = Math.min(reputationScore, 200) // Cap at 200
 
     // Create zkPDF-style proof for GitHub data verification
@@ -308,7 +309,6 @@ async function storeZKPDFProof(
     proofType: 'academic' | 'github'
 ) {
     const scoreField = proofType === 'academic' ? 'education_score' : 'github_score'
-    const proofsField = proofType === 'academic' ? 'education_proofs' : 'github_proofs'
 
     // First get current scores to calculate new total (handle case where record doesn't exist)
     const { data: currentData, error: fetchError } = await supabase
@@ -335,20 +335,6 @@ async function storeZKPDFProof(
         has_degree: proofType === 'academic' ? true : (currentData?.has_degree || false),
         has_certification: proofType === 'academic' ? true : (currentData?.has_certification || false),
         github_username: currentData?.github_username || null,
-        [proofsField]: JSON.stringify([{
-            proofId: proof.proofId,
-            proofType,
-            score: proof.reputationScore,
-            createdAt: proof.createdAt,
-            zkpdfProof: {
-                substringMatches: proof.circuitProof.substringMatches,
-                messageDigestHash: Array.from(proof.circuitProof.messageDigestHash),
-                signerKeyHash: Array.from(proof.circuitProof.signerKeyHash),
-                substringHash: Array.from(proof.circuitProof.substringHash),
-                nullifier: Array.from(proof.circuitProof.nullifier),
-                signature_valid: proof.circuitProof.signature_valid
-            }
-        }]),
         updated_at: new Date().toISOString()
     }
 
@@ -447,14 +433,10 @@ export async function getZKPDFReputation(walletAddress: string): Promise<{
     socialScore: number
     totalScore: number
     tier: string
-    zkpdfProofs: {
-        academic: any[]
-        github: any[]
-    }
 }> {
     const { data, error } = await supabase
         .from('zk_credentials')
-        .select('*')
+        .select('education_score, github_score, social_score, total_base_score, reputation_tier')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single()
 
@@ -464,8 +446,7 @@ export async function getZKPDFReputation(walletAddress: string): Promise<{
             githubScore: 0,
             socialScore: 0,
             totalScore: 0,
-            tier: 'newcomer',
-            zkpdfProofs: { academic: [], github: [] }
+            tier: 'newcomer'
         }
     }
 
@@ -473,11 +454,7 @@ export async function getZKPDFReputation(walletAddress: string): Promise<{
         educationScore: data.education_score || 0,
         githubScore: data.github_score || 0,
         socialScore: data.social_score || 0,
-        totalScore: data.total_base_score || 0,
-        tier: data.reputation_tier || 'newcomer',
-        zkpdfProofs: {
-            academic: JSON.parse(data.education_proofs || '[]'),
-            github: JSON.parse(data.github_proofs || '[]')
-        }
+        totalScore: data.total_base_score || ((data.education_score || 0) + (data.github_score || 0) + (data.social_score || 0)),
+        tier: data.reputation_tier || 'newcomer'
     }
 }

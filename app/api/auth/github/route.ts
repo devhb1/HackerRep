@@ -113,10 +113,11 @@ export async function GET(request: NextRequest) {
             console.log('Wallet:', walletAddress.toLowerCase())
             console.log('GitHub username:', githubUser.login)
 
-            // Only store connection info, NO SCORES YET
+            // Use upsert to handle both create and update cases
             const { data: updatedCredentials, error: updateError } = await supabase
                 .from('zk_credentials')
-                .update({
+                .upsert({
+                    wallet_address: walletAddress.toLowerCase(),
                     github_username: githubUser.login,
                     github_data: JSON.stringify({
                         totalCommits: statsData.totalCommits,
@@ -124,49 +125,24 @@ export async function GET(request: NextRequest) {
                         languages: statsData.languages,
                         followers: githubUser.followers || 0,
                         accountCreated: githubUser.created_at,
-                        connectedAt: new Date().toISOString(),
-                        zkProofGenerated: false // Flag to track if zkPDF proof generated
+                        connectedAt: new Date().toISOString()
                     }),
+                    github_score: 0, // Will be set when zkPDF proof generated
+                    education_score: 0,
+                    social_score: 0,
+                    completed_onboarding: false,
+                    has_degree: false,
+                    has_certification: false,
                     updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'wallet_address'
                 })
-                .eq('wallet_address', walletAddress.toLowerCase())
                 .select()
                 .single()
 
             if (updateError) {
-                console.error('❌ Failed to update GitHub credentials:', updateError)
-
-                // Try creating a new record if update fails
-                console.log('🔄 Trying to create new record...')
-                const { data: newCredentials, error: createError } = await supabase
-                    .from('zk_credentials')
-                    .insert({
-                        wallet_address: walletAddress.toLowerCase(),
-                        education_score: 0,
-                        github_score: 0, // No score until zkPDF proof generated
-                        social_score: 0,
-                        github_username: githubUser.login,
-                        github_data: JSON.stringify({
-                            totalCommits: statsData.totalCommits,
-                            publicRepos: statsData.publicRepos,
-                            languages: statsData.languages,
-                            followers: githubUser.followers || 0,
-                            accountCreated: githubUser.created_at,
-                            connectedAt: new Date().toISOString(),
-                            zkProofGenerated: false
-                        }),
-                        completed_onboarding: false,
-                        has_degree: false,
-                        has_certification: false
-                    })
-                    .select()
-                    .single()
-
-                if (createError) {
-                    console.error('❌ Failed to create new record:', createError)
-                } else {
-                    console.log('✅ Created new ZK credentials record with GitHub connection')
-                }
+                console.error('❌ Failed to upsert GitHub credentials:', updateError)
+                throw new Error(`Database error: ${updateError.message}`)
             } else {
                 console.log('✅ Successfully stored GitHub connection data')
                 console.log('Updated credentials:', updatedCredentials)

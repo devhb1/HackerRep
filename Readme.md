@@ -646,26 +646,30 @@ npm run dev
 
 ---
 
-## 🏆 **Hackathon Submission Summary**
+## 🏆 **ETHGlobal New Delhi 2024 Submission**
 
-**HackerRep** represents a **triple-track winning implementation** that showcases advanced Web3 identity and reputation systems:
+**HackerRep** is a privacy-first reputation system for developers that combines zkPDF credential verification, Self Protocol identity, and ENS integration.
 
-### **🎯 Three-Track Integration **
+### **🎯 Core Features Implemented**
 
-**🔬 Ethereum Foundation Track**: 
-- **zkPDF-powered credential verification** with unified ZK registry system
-- **Client-side privacy infrastructure** for academic and professional documents
-- **Remote proving network** integration without server deployment requirements
+**� zkPDF Reputation System**: 
+- **Academic credential verification** with zero-knowledge proofs
+- **GitHub contribution scoring** with privacy preservation
+- **Unified reputation calculation** based on verifiable achievements
 
-**🛡️ Self Protocol Track**: 
-- **Advanced demographic data extraction** from Aadhaar/Passport ZK proofs
-- **Custom on-chain verification contract** with sophisticated social mechanics
-- **Cultural intelligence system** using nationality, age, and gender for voting power
+**🛡️ Self Protocol Integration**: 
+- **Demographic verification** for India-only access
+- **Age and gender extraction** for intelligent voting mechanics
+- **Privacy-preserving identity** with selective disclosure
 
-**🌐 ENS Track**: 
-- **ENS-first identity architecture** with seamless name resolution
-- **Social reputation system** built around decentralized naming
-- **Portable identity framework** connecting reputation to ENS names
+**🌐 ENS Identity Layer**: 
+- **ENS-first user interface** with automatic name resolution
+- **Wallet-based authentication** with ENS priority display
+- **Decentralized reputation** tied to blockchain identity
+
+---
+
+Made with 🔥 by **devhb**
 
 
 
