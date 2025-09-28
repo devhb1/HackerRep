@@ -64,10 +64,10 @@ export default function ProfilePage() {
         <img src={user?.avatar_url || '/pixel-avatar.png'} alt="Avatar" className="size-18 rounded bg-muted pixel-border" />
         <div className="flex-1">
           <h1 className="font-pixel text-2xl text-primary">
-            {user?.ens_name || user?.display_name || address?.substring(0, 6) + '...' + address?.substring(38)}
+            {user?.ens_name || user?.display_name || `${address?.substring(0, 6)}...${address?.substring(-4)}`}
           </h1>
-          <div className="text-sm text-muted-foreground">
-            {address?.substring(0, 6)}...{address?.substring(38)}
+          <div className="text-sm text-muted-foreground font-mono">
+            {`${address?.substring(0, 6)}...${address?.substring(-4)}`}
           </div>
           {zkCredentials && (
             <div className="flex items-center gap-2 mt-2">
