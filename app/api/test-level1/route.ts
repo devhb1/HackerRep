@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { 
-    generateSimpleGitHubZKProof, 
-    generateSimpleAcademicZKProof,
-    testLevel1ZKGeneration,
-    getSimpleReputation
-} from '@/lib/simple-zk-reputation'
+import { supabase } from '@/lib/supabase'
 
 // POST /api/test-level1 - Quick test for Level 1 ZK proof generation
 export async function POST(request: NextRequest) {
@@ -22,82 +17,125 @@ export async function POST(request: NextRequest) {
         console.log(`🧪 Testing Level 1 ZK proof generation: ${testType}`)
 
         if (testType === 'github') {
-            // Test GitHub ZK proof generation
-            const mockGitHubStats = {
-                publicRepos: 10,
-                totalCommits: 50,
-                languages: ['TypeScript', 'JavaScript', 'Python']
+            // Test GitHub ZK proof generation using main API
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletAddress,
+                    action: 'generate_github_proof',
+                    data: {
+                        githubUsername: 'testuser',
+                        githubStats: {
+                            publicRepos: 10,
+                            totalCommits: 50,
+                            languages: ['TypeScript', 'JavaScript', 'Python']
+                        }
+                    }
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('GitHub ZK proof generation failed')
             }
 
-            const zkProof = await generateSimpleGitHubZKProof(
-                walletAddress,
-                'testuser',
-                mockGitHubStats
-            )
+            const result = await response.json()
 
             return NextResponse.json({
                 success: true,
                 message: '🐙 GitHub ZK proof generated successfully!',
-                proof: {
-                    proofId: zkProof.proofId,
-                    score: zkProof.score,
-                    commitment: zkProof.commitment,
-                    nullifier: zkProof.nullifier,
-                    verified: zkProof.verified
-                },
+                proof: result.proof,
                 level1Working: true
             })
         }
 
         if (testType === 'academic') {
-            // Test Academic ZK proof generation
-            const zkProof = await generateSimpleAcademicZKProof(
-                walletAddress,
-                'bachelors',
-                'Test University'
-            )
+            // Test Academic ZK proof generation using main API
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletAddress,
+                    action: 'generate_academic_proof',
+                    data: {
+                        degreeType: 'bachelors',
+                        institution: 'Test University'
+                    }
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('Academic ZK proof generation failed')
+            }
+
+            const result = await response.json()
 
             return NextResponse.json({
                 success: true,
                 message: '🎓 Academic ZK proof generated successfully!',
-                proof: {
-                    proofId: zkProof.proofId,
-                    score: zkProof.score,
-                    commitment: zkProof.commitment,
-                    nullifier: zkProof.nullifier,
-                    verified: zkProof.verified
-                },
+                proof: result.proof,
                 level1Working: true
             })
         }
 
-        // Test both using the comprehensive test function
-        const testResult = await testLevel1ZKGeneration(walletAddress)
+        // Test both GitHub and Academic ZK proof generation
+        const githubResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                walletAddress,
+                action: 'generate_github_proof',
+                data: {
+                    githubUsername: 'testuser',
+                    githubStats: {
+                        publicRepos: 10,
+                        totalCommits: 50,
+                        languages: ['TypeScript', 'JavaScript', 'Python']
+                    }
+                }
+            })
+        })
 
-        if (!testResult.success) {
+        const academicResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                walletAddress,
+                action: 'generate_academic_proof',
+                data: {
+                    degreeType: 'bachelors',
+                    institution: 'Test University'
+                }
+            })
+        })
+
+        if (!githubResponse.ok || !academicResponse.ok) {
             return NextResponse.json({
                 success: false,
-                error: testResult.message,
+                error: 'Failed to generate ZK proofs',
                 level1Status: 'FAILED'
             }, { status: 500 })
         }
 
+        const githubResult = await githubResponse.json()
+        const academicResult = await academicResponse.json()
+
         return NextResponse.json({
             success: true,
-            message: testResult.message,
+            message: '🎉 Both GitHub and Academic ZK proofs generated successfully!',
             proofs: {
                 github: {
-                    proofId: testResult.githubProof?.proofId,
-                    score: testResult.githubProof?.score,
-                    verified: testResult.githubProof?.verified
+                    proofId: githubResult.proof?.proofId,
+                    score: githubResult.proof?.score,
+                    verified: githubResult.proof?.verified
                 },
                 academic: {
-                    proofId: testResult.academicProof?.proofId,
-                    score: testResult.academicProof?.score,
-                    verified: testResult.academicProof?.verified
+                    proofId: academicResult.proof?.proofId,
+                    score: academicResult.proof?.score,
+                    verified: academicResult.proof?.verified
                 }
             },
-            totalScore: testResult.totalScore,
+            totalScore: (githubResult.proof?.score || 0) + (academicResult.proof?.score || 0),
             level1Status: 'WORKING',
             zkReputationEnabled: true
         })
