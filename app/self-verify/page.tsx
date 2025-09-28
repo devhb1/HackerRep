@@ -15,6 +15,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+// Force dynamic rendering to prevent SSR issues with wagmi
+export const dynamic = 'force-dynamic';
+
 export default function SelfVerifyPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -24,6 +27,7 @@ export default function SelfVerifyPage() {
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [universalLink, setUniversalLink] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   // For HackerRep, we want to allow India only
   const excludedCountries = useMemo(() => {
@@ -31,8 +35,15 @@ export default function SelfVerifyPage() {
     return allCountries.filter(country => country !== countries.INDIA);
   }, []);
 
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Initialize Self App
   useEffect(() => {
+    if (!mounted) return;
+    
     const initializeSelfApp = async () => {
       if (!address || !isConnected) {
         setIsLoading(false);
@@ -75,7 +86,7 @@ export default function SelfVerifyPage() {
     };
 
     initializeSelfApp();
-  }, [excludedCountries, address, isConnected]);
+  }, [excludedCountries, address, isConnected, mounted]);
 
   const displayToast = (message: string) => {
     setToastMessage(message);
@@ -143,6 +154,17 @@ export default function SelfVerifyPage() {
       displayToast("Verification successful but sync failed. Please try again.");
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isConnected || !address) {
     return (
