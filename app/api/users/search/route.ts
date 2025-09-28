@@ -16,9 +16,9 @@ export async function GET(request: Request) {
         // Search users by ENS, display name, or wallet address
         const { data: users, error } = await supabase
             .from('users')
-            .select('id, wallet_address, ens_name, display_name, avatar_url, reputation, total_connections')
+            .select('id, wallet_address, ens_name, display_name, avatar_url, reputation_score, seniority_index, age, gender, nationality, self_verified')
             .or(`ens_name.ilike.%${query}%,display_name.ilike.%${query}%,wallet_address.ilike.%${query}%`)
-            .order('reputation', { ascending: false })
+            .order('reputation_score', { ascending: false })
             .limit(20)
 
         if (error) throw error

@@ -1,38 +1,98 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// Level 3: Advanced Voting Power Calculation System
+function calculateVotingPower(
+    voterAge: number,
+    voterReputation: number,
+    voterGender: string,
+    votedForAge: number,
+    votedForReputation: number,
+    votedForGender: string
+): { power: number, breakdown: string } {
+    let basePower = 10 // Base voting power
+    let breakdown = `Base: ${basePower}`
+    
+    // Rule 1: Age difference > 5 years
+    const ageDiff = Math.abs(voterAge - votedForAge)
+    if (ageDiff > 5) {
+        if (voterAge > votedForAge) {
+            basePower = 15 // Higher age gets 15 points
+            breakdown = `Age advantage (${voterAge} > ${votedForAge}): 15`
+        } else {
+            basePower = 7 // Lower age gets 7 points
+            breakdown = `Age disadvantage (${voterAge} < ${votedForAge}): 7`
+        }
+    }
+    
+    // Rule 2: Reputation difference > 50 points (overrides age if both apply)
+    const repDiff = Math.abs(voterReputation - votedForReputation)
+    if (repDiff > 50) {
+        if (voterReputation > votedForReputation) {
+            basePower = 15 // Higher reputation gets 15 points
+            breakdown = `Reputation advantage (${voterReputation} > ${votedForReputation}): 15`
+        } else {
+            basePower = 7 // Lower reputation gets 7 points
+            breakdown = `Reputation disadvantage (${voterReputation} < ${votedForReputation}): 7`
+        }
+    }
+    
+    // Rule 3: Cross-gender voting bonus (2x multiplier)
+    let finalPower = basePower
+    if (voterGender && votedForGender && 
+        voterGender !== votedForGender && 
+        (voterGender === 'MALE' || voterGender === 'FEMALE') &&
+        (votedForGender === 'MALE' || votedForGender === 'FEMALE')) {
+        finalPower = basePower * 2
+        breakdown += ` → Cross-gender bonus (${voterGender}→${votedForGender}): ${finalPower}`
+    }
+    
+    return { power: finalPower, breakdown }
+}
+
 // Submit a new vote
 export async function POST(request: Request) {
     try {
         const { voterWallet, votedForWallet, voteType, feedback } = await request.json()
 
-        // Get user IDs
+        // Get comprehensive user data for voting power calculation
         const { data: voter } = await supabase
             .from('users')
-            .select('id')
-            .eq('wallet_address', voterWallet)
+            .select('id, reputation_score, age, gender, nationality, self_verified')
+            .eq('wallet_address', voterWallet.toLowerCase())
             .single()
 
         const { data: votedFor } = await supabase
             .from('users')
-            .select('*')
-            .eq('wallet_address', votedForWallet)
+            .select('id, reputation_score, age, gender, nationality, wallet_address, display_name')
+            .eq('wallet_address', votedForWallet.toLowerCase())
             .single()
 
         if (!voter || !votedFor) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 })
         }
 
-        // Check if users are connected
-        const { data: connection } = await supabase
-            .from('connection_requests')
-            .select('*')
-            .or(`and(requester_id.eq.${voter.id},target_id.eq.${votedFor.id}),and(requester_id.eq.${votedFor.id},target_id.eq.${voter.id})`)
-            .eq('status', 'accepted')
-            .single()
+        // LEVEL 3: Enhanced eligibility check - ONLY Self verified Indian users can vote
+        const canVote = voter?.self_verified === true && 
+                       voter?.nationality === 'INDIA'
+        
+        let connectionId = null
 
-        if (!connection) {
-            return NextResponse.json({ error: 'Can only vote on connected users' }, { status: 400 })
+        if (!canVote) {
+            return NextResponse.json({ 
+                error: 'Voting not allowed. Only Self Protocol verified users with Indian nationality can vote. Please complete Self verification first.',
+                voterVerified: voter?.self_verified,
+                voterNationality: voter?.nationality
+            }, { status: 400 })
+        }
+
+        // Validate demographic data for voting power calculation
+        if (!voter.age || !voter.gender || !votedFor.age || !votedFor.gender) {
+            return NextResponse.json({ 
+                error: 'Incomplete demographic data. Both users must have age and gender data from Self verification.',
+                voterData: { age: voter.age, gender: voter.gender },
+                votedForData: { age: votedFor.age, gender: votedFor.gender }
+            }, { status: 400 })
         }
 
         // Check if already voted
@@ -47,7 +107,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Already voted for this user' }, { status: 400 })
         }
 
-        // Create vote
+        // LEVEL 3: Calculate sophisticated voting power
+        const votingPowerResult = calculateVotingPower(
+            voter.age,
+            voter.reputation_score || 0,
+            voter.gender,
+            votedFor.age,
+            votedFor.reputation_score || 0,
+            votedFor.gender
+        )
+        
+        const votePower = votingPowerResult.power
+        const repChange = (voteType === 'upvote' ? 1 : -1) * votePower
+
+        // Demographic data already loaded in voter object
+
+        // Create vote with Level 3 enhanced data
         const { error: voteError } = await supabase
             .from('votes')
             .insert({
@@ -55,25 +130,40 @@ export async function POST(request: Request) {
                 voted_for_id: votedFor.id,
                 vote_type: voteType,
                 feedback,
-                connection_request_id: connection.id
+                voter_verified: true, // All voters are verified at this point
+                verification_weight: votePower,
+                voter_nationality: voter.nationality,
+                voter_gender: voter.gender,
+                voter_age: voter.age
             })
 
         if (voteError) throw voteError
 
-        // Update reputation
-        const repChange = voteType === 'upvote' ? 1 : -1
+        // Update reputation with Level 3 sophisticated scoring
+        const newReputation = (votedFor.reputation_score || 0) + repChange
         const { error: repError } = await supabase
             .from('users')
             .update({
-                reputation: votedFor.reputation + repChange,
-                total_upvotes: voteType === 'upvote' ? votedFor.total_upvotes + 1 : votedFor.total_upvotes,
-                total_downvotes: voteType === 'downvote' ? votedFor.total_downvotes + 1 : votedFor.total_downvotes
+                reputation_score: Math.max(0, newReputation), // Prevent negative reputation
+                updated_at: new Date().toISOString()
             })
             .eq('id', votedFor.id)
 
         if (repError) throw repError
 
-        return NextResponse.json({ success: true })
+        return NextResponse.json({ 
+            success: true,
+            votePower,
+            repChange,
+            powerBreakdown: votingPowerResult.breakdown,
+            voterAge: voter.age,
+            voterGender: voter.gender,
+            voterReputation: voter.reputation_score,
+            votedForAge: votedFor.age,
+            votedForGender: votedFor.gender,
+            votedForReputation: votedFor.reputation_score,
+            newReputation: Math.max(0, (votedFor.reputation_score || 0) + repChange)
+        })
     } catch (error) {
         console.error('Vote submission error:', error)
         return NextResponse.json({ error: 'Failed to submit vote' }, { status: 500 })

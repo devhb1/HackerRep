@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { PixelButton } from '@/components/pixel/pixel-button'
+import { VerificationStatus } from '@/components/verification-status'
 
 export default function PendingConnectionsDashboard() {
     const { address } = useAccount()
@@ -43,7 +44,12 @@ export default function PendingConnectionsDashboard() {
 
     return (
         <main className="mx-auto max-w-4xl px-4 py-8 space-y-6">
-            <h1 className="font-pixel text-2xl text-primary glitch">Pending Connections</h1>
+            <h1 className="font-pixel text-2xl text-primary glitch">Dashboard</h1>
+            
+            {/* Verification Status */}
+            <VerificationStatus />
+            
+            <h2 className="font-pixel text-xl text-primary">Pending Connections</h2>
             <div className="pixel-border bg-card p-4">
                 {loading && <div className="text-muted-foreground">Loading...</div>}
                 {requests.length === 0 && !loading && (

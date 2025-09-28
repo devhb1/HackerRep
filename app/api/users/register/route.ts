@@ -5,11 +5,11 @@ export async function POST(request: NextRequest) {
     try {
         const { walletAddress, ensName, displayName, avatarUrl } = await request.json()
 
-        // Check if user exists
+        // Check if user exists (case-insensitive)
         const { data: existingUser } = await supabase
             .from('users')
             .select('*')
-            .eq('wallet_address', walletAddress)
+            .eq('wallet_address', walletAddress.toLowerCase())
             .single()
 
         if (existingUser) {
@@ -51,11 +51,11 @@ export async function POST(request: NextRequest) {
         const { data: newUser, error } = await supabase
             .from('users')
             .insert({
-                wallet_address: walletAddress,
+                wallet_address: walletAddress.toLowerCase(),
                 ens_name: ensName,
                 display_name: finalDisplayName,
                 avatar_url: finalAvatarUrl,
-                reputation: 100 // BASE RATING
+                reputation_score: 100 // BASE RATING
             })
             .select()
             .single()
