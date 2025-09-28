@@ -62,14 +62,39 @@ export default function SelfVerifyPage() {
         console.log("Wallet address:", walletAddress);
         
         // Create a robust Self App configuration with better error handling
+        const endpoint = process.env.NEXT_PUBLIC_SELF_ENDPOINT || (typeof window !== 'undefined' ? `${window.location.origin}/api/self/verify` : 'http://localhost:3000/api/self/verify');
+        
+        console.log("Using Self endpoint:", endpoint);
+        console.log("Wallet address:", walletAddress);
+        console.log("Endpoint type: http");
+        
+        // Validate endpoint URL
+        try {
+          new URL(endpoint);
+          console.log("✅ Endpoint URL is valid");
+        } catch (urlError) {
+          console.error("❌ Invalid endpoint URL:", urlError);
+          throw new Error(`Invalid endpoint URL: ${endpoint}`);
+        }
+        
+        console.log("Creating SelfAppBuilder with config:", {
+          version: 2,
+          appName: "HackerRep Identity Verification",
+          scope: "hackerrep-verification",
+          endpoint: endpoint,
+          userId: walletAddress,
+          endpointType: "http",
+          userIdType: "hex"
+        });
+
         const app = new SelfAppBuilder({
           version: 2,
           appName: "HackerRep Identity Verification",
           scope: "hackerrep-verification",
-          endpoint: "https://hacker-rep.vercel.app/api/self/verify",
+          endpoint: endpoint,
           logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
           userId: walletAddress,
-          endpointType: "celo",
+          endpointType: "http",
           userIdType: "hex",
           userDefinedData: JSON.stringify({
             walletAddress: walletAddress,
