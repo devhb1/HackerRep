@@ -75,7 +75,7 @@ export default function SelfVerifyPage() {
         // Use current deployment URL (works for preview branches and production)
         const baseUrl = typeof window !== 'undefined' ? window.location.origin :
           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://hacker-rep.vercel.app');
-        
+
         // Self Protocol expects the endpoint without /api prefix
         const endpoint = `${baseUrl}/api/self/verify`;
 
@@ -109,17 +109,14 @@ export default function SelfVerifyPage() {
           scope: "hacker-rep-verification",
           endpoint: endpoint,
           userId: walletAddress,
-          endpointType: "https",
+          endpointType: "staging_https", // Use staging_https as per docs
           userIdType: "hex",
-          userDefinedData: JSON.stringify({
-            walletAddress: walletAddress,
-            timestamp: Date.now(),
-            source: "hacker-rep"
-          }),
+          userDefinedData: walletAddress, // Use wallet address directly as hex string
           disclosures: {
-            excludedCountries: excludedCountries,
+            minimumAge: 18, // Must match backend config
+            excludedCountries: ["IRN", "PRK", "RUS", "SYR"], // Must match backend
+            ofac: true, // Must match backend  
             nationality: true,
-            date_of_birth: true,
             gender: true,
           }
         }).build();
