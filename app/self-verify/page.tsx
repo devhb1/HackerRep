@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import {
   SelfQRcodeWrapper,
   SelfAppBuilder,
@@ -15,12 +14,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-// Force dynamic rendering to prevent SSR issues with wagmi
+// Force dynamic rendering to prevent SSR issues
 export const dynamic = 'force-dynamic';
 
 export default function SelfVerifyPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
   const [linkCopied, setLinkCopied] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -28,6 +26,7 @@ export default function SelfVerifyPage() {
   const [universalLink, setUniversalLink] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   // For HackerRep, we want to allow India only
   const excludedCountries = useMemo(() => {
@@ -35,20 +34,24 @@ export default function SelfVerifyPage() {
     return allCountries.filter(country => country !== countries.INDIA);
   }, []);
 
-  // Handle client-side mounting
+  // Handle client-side mounting and get wallet address
   useEffect(() => {
     setMounted(true);
+    
+    // Get wallet address from URL params or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const addressFromUrl = urlParams.get('address');
+    const addressFromStorage = localStorage.getItem('walletAddress');
+    const address = addressFromUrl || addressFromStorage || '0xd1c9BD2a14b00C99803B5Ded4571814D227566C7';
+    
+    setWalletAddress(address);
   }, []);
 
   // Initialize Self App
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !walletAddress) return;
     
     const initializeSelfApp = async () => {
-      if (!address || !isConnected) {
-        setIsLoading(false);
-        return;
-      }
 
       try {
         setIsLoading(true);
@@ -59,11 +62,11 @@ export default function SelfVerifyPage() {
           scope: "hackerrep-verification",
           endpoint: `${process.env.NEXT_PUBLIC_SELF_ENDPOINT || 'http://localhost:3000'}/api/self/verify`,
           logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
-          userId: address,
+          userId: walletAddress,
           endpointType: "celo",
           userIdType: "hex",
           userDefinedData: JSON.stringify({
-            walletAddress: address,
+            walletAddress: walletAddress,
             timestamp: Date.now(),
             source: "hacker-rep",
             contractAddress: "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db"
@@ -86,7 +89,7 @@ export default function SelfVerifyPage() {
     };
 
     initializeSelfApp();
-  }, [excludedCountries, address, isConnected, mounted]);
+  }, [excludedCountries, walletAddress, mounted]);
 
   const displayToast = (message: string) => {
     setToastMessage(message);
@@ -128,7 +131,7 @@ export default function SelfVerifyPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: walletAddress,
           source: 'hacker-rep-self-verify',
           timestamp: Date.now(),
           contractAddress: "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
@@ -166,7 +169,7 @@ export default function SelfVerifyPage() {
     );
   }
 
-  if (!isConnected || !address) {
+  if (!walletAddress) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -192,7 +195,7 @@ export default function SelfVerifyPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Initializing Self verification...</p>
-          <p className="text-sm text-gray-500 mt-2">Wallet: {address.substring(0, 6)}...{address.substring(address.length - 4)}</p>
+          <p className="text-sm text-gray-500 mt-2">Wallet: {walletAddress?.substring(0, 6)}...{walletAddress?.substring(walletAddress.length - 4)}</p>
         </div>
       </div>
     );
