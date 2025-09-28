@@ -99,7 +99,7 @@ export default function SelfVerifyPage() {
           endpoint: endpoint,
           userId: walletAddress,
           endpointType: "staging_https",
-          userIdType: "uuid"
+          userIdType: "hex"
         });
 
         const app = new SelfAppBuilder({
@@ -109,7 +109,7 @@ export default function SelfVerifyPage() {
           endpoint: endpoint,
           userId: walletAddress,
           endpointType: "staging_https", // Use staging_https as per docs
-          userIdType: "uuid", // Must match backend: "uuid" not "hex"
+          userIdType: "hex", // CRITICAL: Must be "hex" in frontend per docs
           userDefinedData: walletAddress, // Use wallet address as user context
           disclosures: {
             minimumAge: 18, // Must match backend config
