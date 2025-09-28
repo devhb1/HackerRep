@@ -16,7 +16,7 @@ export async function OPTIONS(request: NextRequest) {
 
 // Initialize Self Protocol backend verifier for CELO MAINNET ONCHAIN VERIFICATION
 const selfBackendVerifier = new SelfBackendVerifier(
-    "hacker-rep-verification", // Must match frontend scope
+    "hackerrep-verification-v1", // Simplified scope for Self Protocol SDK compatibility
     "https://hacker-rep.vercel.app/api/self/verify", // Always use production URL to avoid auth protection
     false, // mockPassport: false for CELO MAINNET PRODUCTION
     AllIds, // Accept all document types (passport, ID, Aadhaar)

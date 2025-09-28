@@ -105,7 +105,7 @@ export default function SelfVerifyPage() {
         const app = new SelfAppBuilder({
           version: 2,
           appName: "HackerRep",
-          scope: "hacker-rep-verification",
+          scope: "hackerrep-verification-v1", // Simplified scope for Self Protocol SDK compatibility
           endpoint: endpoint,
           userId: walletAddress, // Wallet address for onchain verification
           endpointType: "https", // Use "https" for production Celo mainnet
@@ -202,7 +202,7 @@ export default function SelfVerifyPage() {
           walletAddress: walletAddress,
           source: 'hacker-rep-self-verify',
           timestamp: Date.now(),
-          contractAddress: "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
+          contractAddress: "0xD132024926D56D8c1a9f7628942bA4B12229718F",
           chainId: 42220,
           demographics: {
             nationality: "INDIA",
