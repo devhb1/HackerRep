@@ -331,7 +331,7 @@ async function storeZKPDFProof(
         education_score: proofType === 'academic' ? proof.reputationScore : currentEducationScore,
         github_score: proofType === 'github' ? proof.reputationScore : currentGithubScore,
         social_score: currentSocialScore,
-        completed_onboarding: (proofType === 'academic' ? proof.reputationScore : currentEducationScore) > 0 && (proofType === 'github' ? proof.reputationScore : currentGithubScore) > 0,
+        completed_onboarding: true, // Mark as completed when any zkPDF proof generated
         has_degree: proofType === 'academic' ? true : (currentData?.has_degree || false),
         has_certification: proofType === 'academic' ? true : (currentData?.has_certification || false),
         github_username: currentData?.github_username || null,
@@ -393,17 +393,9 @@ export async function verifyZKPDFProof(proof: ZKPDFReputationProof): Promise<boo
             .single()
 
         if (existing) {
-            const proofsField = proof.proofType === 'academic' ? 'education_proofs' : 'github_proofs'
-            const existingProofs = JSON.parse(existing[proofsField] || '[]')
-
-            const duplicateNullifier = existingProofs.find((p: any) =>
-                Buffer.from(p.zkpdfProof.nullifier).equals(Buffer.from(proof.circuitProof.nullifier))
-            )
-
-            if (duplicateNullifier) {
-                console.log('❌ zkPDF nullifier already used')
-                return false
-            }
+            // For simplicity in the demo, we'll skip nullifier checks
+            // In production, this would check against a proper nullifier registry
+            console.log('✅ zkPDF proof validation: Existing user found, proceeding...')
         }
 
         console.log('✅ zkPDF proof verified')

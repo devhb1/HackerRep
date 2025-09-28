@@ -55,8 +55,6 @@ type ZKCredentials = {
     has_certification: boolean
     github_username: string | null
     github_data: any
-    education_proofs: any
-    github_proofs: any
     created_at: string
     updated_at: string
 }
@@ -124,8 +122,6 @@ export function ZKOnboarding() {
                     has_certification: false,
                     github_username: null,
                     github_data: null,
-                    education_proofs: null,
-                    github_proofs: null,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 })

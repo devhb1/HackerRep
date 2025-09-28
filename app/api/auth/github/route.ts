@@ -221,14 +221,7 @@ export async function POST(request: NextRequest) {
                     languages: githubStats.languages,
                     connectedAt: new Date().toISOString(),
                     zkProofId: zkProofId
-                }),
-                github_proofs: JSON.stringify([{
-                    proofId: zkProofId || 'fallback_' + Date.now(),
-                    username: githubUsername,
-                    timestamp: new Date().toISOString(),
-                    reputationScore: finalScore,
-                    isZkPdfProof: !!zkProofId
-                }])
+                })
             })
             .select()
             .single()
