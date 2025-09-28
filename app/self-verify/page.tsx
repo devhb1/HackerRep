@@ -38,6 +38,9 @@ export default function SelfVerifyPage() {
   useEffect(() => {
     setMounted(true);
     
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     // Get wallet address from URL params or localStorage
     const urlParams = new URLSearchParams(window.location.search);
     const addressFromUrl = urlParams.get('address');
@@ -114,7 +117,7 @@ export default function SelfVerifyPage() {
   };
 
   const openSelfApp = () => {
-    if (!universalLink) return;
+    if (!universalLink || typeof window === 'undefined') return;
 
     window.open(universalLink, "_blank");
     displayToast("Opening Self App...");
