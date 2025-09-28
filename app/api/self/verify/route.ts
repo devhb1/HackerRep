@@ -72,35 +72,72 @@ export async function POST(request: NextRequest) {
                 }, { status: 200 });
             }
 
-            // Extract wallet address from userContextData (hex string)
-            const walletAddr = userContextData?.toLowerCase();
-
-            // Store verification data in self_verifications table
-            const { data: verification, error: verificationError } = await supabase
+        // Extract wallet address from userContextData (hex string)
+        console.log('Raw userContextData:', userContextData);
+        const walletAddr = userContextData?.toLowerCase();
+        console.log('Processed wallet address:', walletAddr);            // Store verification data in self_verifications table
+            // First check if verification already exists
+            const { data: existingVerification } = await supabase
                 .from('self_verifications')
-                .upsert({
-                    wallet_address: walletAddr,
-                    nationality: nationality,
-                    gender: gender,
-                    age: age,
-                    verification_status: 'verified',
-                    verified_at: new Date().toISOString(),
-                    attestation_id: attestationId,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'wallet_address'
-                })
-                .select()
+                .select('id')
+                .eq('wallet_address', walletAddr)
                 .single();
+
+            let verification, verificationError;
+            
+            if (existingVerification) {
+                // Update existing verification
+                const { data, error } = await supabase
+                    .from('self_verifications')
+                    .update({
+                        nationality: nationality,
+                        gender: gender,
+                        age: age,
+                        verification_status: 'verified',
+                        verified_at: new Date().toISOString(),
+                        identity_commitment: attestationId,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('wallet_address', walletAddr)
+                    .select()
+                    .single();
+                verification = data;
+                verificationError = error;
+            } else {
+                // Insert new verification
+                const { data, error } = await supabase
+                    .from('self_verifications')
+                    .insert({
+                        wallet_address: walletAddr,
+                        nationality: nationality,
+                        gender: gender,
+                        age: age,
+                        verification_status: 'verified',
+                        verified_at: new Date().toISOString(),
+                        identity_commitment: attestationId,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+                verification = data;
+                verificationError = error;
+            }
 
             if (verificationError) {
                 console.error('Error storing verification:', verificationError);
+                console.error('Verification error details:', {
+                    code: verificationError.code,
+                    message: verificationError.message,
+                    details: verificationError.details,
+                    hint: verificationError.hint
+                });
                 return NextResponse.json({
                     status: "error",
                     result: false,
-                    reason: 'Failed to store verification data',
-                    error_code: "DATABASE_ERROR"
+                    reason: `Failed to store verification data: ${verificationError.message}`,
+                    error_code: "DATABASE_ERROR",
+                    details: verificationError
                 }, { status: 200 });
             }
 
