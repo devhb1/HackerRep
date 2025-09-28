@@ -27,6 +27,7 @@ export default function SelfVerifyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // For HackerRep, we want to allow India only
   const excludedCountries = useMemo(() => {
@@ -57,6 +58,8 @@ export default function SelfVerifyPage() {
     const initializeSelfApp = async () => {
       try {
         setIsLoading(true);
+        console.log("Starting Self App initialization...");
+        console.log("Wallet address:", walletAddress);
         
         // Create a simplified Self App configuration
         const app = new SelfAppBuilder({
@@ -82,18 +85,34 @@ export default function SelfVerifyPage() {
           }
         }).build();
 
+        console.log("Self App created successfully:", app);
         setSelfApp(app);
-        setUniversalLink(getUniversalLink(app));
+        
+        const universalLink = getUniversalLink(app);
+        console.log("Universal link generated:", universalLink);
+        setUniversalLink(universalLink);
+        
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to initialize Self app:", error);
-        // If Self Protocol fails, create a fallback verification
-        setUniversalLink(`https://hacker-rep.vercel.app/api/self/verify?wallet=${walletAddress}`);
+        console.error("Error details:", error);
+        setError(`Self App initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
       }
     };
 
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.error("Self App initialization timed out");
+        setError("Self App initialization timed out. Please try again.");
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
     initializeSelfApp();
+    
+    return () => clearTimeout(timeoutId);
   }, [excludedCountries, walletAddress, mounted]);
 
   const displayToast = (message: string) => {
@@ -206,6 +225,32 @@ export default function SelfVerifyPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen w-full bg-gray-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">QR Code Loading Failed</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="space-y-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-gray-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
       {/* Header */}
@@ -219,19 +264,37 @@ export default function SelfVerifyPage() {
         <p className="text-xs text-gray-500 px-2 mt-1">
           🇮🇳 India only • Enhanced voting power • On-chain verification
         </p>
+        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-xs text-yellow-800 font-medium">
+            ⚠️ Voting Requirement: Self Protocol verification is MANDATORY for voting
+          </p>
+          <p className="text-xs text-yellow-700 mt-1">
+            Only verified Indian users can participate in the voting system
+          </p>
+        </div>
       </div>
 
       {/* Main content */}
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto">
         <div className="flex justify-center mb-4 sm:mb-6">
           {selfApp ? (
-            <SelfQRcodeWrapper
-              selfApp={selfApp}
-              onSuccess={handleSuccessfulVerification}
-              onError={() => {
-                displayToast("Error: Failed to verify identity");
-              }}
-            />
+            <div className="text-center">
+              <SelfQRcodeWrapper
+                selfApp={selfApp}
+                onSuccess={handleSuccessfulVerification}
+                onError={() => {
+                  displayToast("Error: Failed to verify identity");
+                }}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Scan with Self App to verify your identity
+              </p>
+              <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                <p className="text-gray-600">Wallet: {walletAddress?.substring(0, 6)}...{walletAddress?.substring(walletAddress.length - 4)}</p>
+                <p className="text-gray-600">App Status: {selfApp ? 'Ready' : 'Not Ready'}</p>
+                <p className="text-gray-600">Link: {universalLink ? 'Generated' : 'Not Generated'}</p>
+              </div>
+            </div>
           ) : (
             <div className="w-[256px] h-[256px] bg-gray-200 animate-pulse flex items-center justify-center">
               <p className="text-gray-500 text-sm">Loading QR Code...</p>
@@ -258,22 +321,6 @@ export default function SelfVerifyPage() {
           </Button>
         </div>
 
-        {/* Fallback verification button */}
-        <div className="mt-4">
-          <Button
-            onClick={() => {
-              // Direct verification without Self Protocol
-              window.open(`https://hacker-rep.vercel.app/api/self/verify?wallet=${walletAddress}`, '_blank');
-            }}
-            variant="secondary"
-            className="w-full"
-          >
-            🔄 Alternative Verification
-          </Button>
-          <p className="text-xs text-gray-500 mt-1 text-center">
-            If Self App doesn't work, try this alternative method
-          </p>
-        </div>
 
         <div className="flex flex-col items-center gap-2 mt-2">
           <span className="text-gray-500 text-xs uppercase tracking-wide">Your Wallet Address</span>

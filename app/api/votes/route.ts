@@ -74,26 +74,25 @@ export async function POST(request: Request) {
 
         // LEVEL 3: Enhanced eligibility check - ONLY Self verified Indian users can vote
         const canVote = voter?.self_verified === true && 
-                       voter?.nationality === 'INDIA'
+                       voter?.nationality === 'INDIA' &&
+                       voter?.voting_eligible === true
         
-        let connectionId = null
-
         if (!canVote) {
             return NextResponse.json({ 
                 error: 'Voting not allowed. Only Self Protocol verified users with Indian nationality can vote. Please complete Self verification first.',
-                voterVerified: voter?.self_verified,
-                voterNationality: voter?.nationality
+                requirements: {
+                    selfVerified: voter?.self_verified,
+                    nationality: voter?.nationality,
+                    votingEligible: voter?.voting_eligible
+                }
             }, { status: 400 })
         }
 
-        // Validate demographic data for voting power calculation
-        if (!voter.age || !voter.gender || !votedFor.age || !votedFor.gender) {
-            return NextResponse.json({ 
-                error: 'Incomplete demographic data. Both users must have age and gender data from Self verification.',
-                voterData: { age: voter.age, gender: voter.gender },
-                votedForData: { age: votedFor.age, gender: votedFor.gender }
-            }, { status: 400 })
-        }
+        // Use default values for missing demographic data
+        const voterAge = voter.age || 25
+        const voterGender = voter.gender || 'MALE'
+        const votedForAge = votedFor.age || 25
+        const votedForGender = votedFor.gender || 'MALE'
 
         // Check if already voted
         const { data: existingVote } = await supabase
@@ -109,12 +108,12 @@ export async function POST(request: Request) {
 
         // LEVEL 3: Calculate sophisticated voting power
         const votingPowerResult = calculateVotingPower(
-            voter.age,
+            voterAge,
             voter.reputation_score || 0,
-            voter.gender,
-            votedFor.age,
+            voterGender,
+            votedForAge,
             votedFor.reputation_score || 0,
-            votedFor.gender
+            votedForGender
         )
         
         const votePower = votingPowerResult.power
@@ -151,11 +150,11 @@ export async function POST(request: Request) {
             votePower,
             repChange,
             powerBreakdown: votingPowerResult.breakdown,
-            voterAge: voter.age,
-            voterGender: voter.gender,
+            voterAge: voterAge,
+            voterGender: voterGender,
             voterReputation: voter.reputation_score,
-            votedForAge: votedFor.age,
-            votedForGender: votedFor.gender,
+            votedForAge: votedForAge,
+            votedForGender: votedForGender,
             votedForReputation: votedFor.reputation_score,
             newReputation: Math.max(0, (votedFor.reputation_score || 0) + repChange)
         })

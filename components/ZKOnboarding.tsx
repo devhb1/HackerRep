@@ -95,16 +95,29 @@ export function ZKOnboarding() {
 
     const fetchCredentials = async () => {
         try {
-            const response = await fetch(`/api/zk-credentials/${address}`)
+            const response = await fetch(`/api/zk-reputation?walletAddress=${address}&action=get_reputation`)
             if (response.ok) {
                 const data = await response.json()
-                console.log('📊 Fetched credentials:', data.credentials)
-                setCredentials(data.credentials)
+                console.log('📊 Fetched credentials:', data.zkCredentials)
+                setCredentials(data.zkCredentials || {
+                    education_score: 0,
+                    github_score: 0,
+                    social_score: 0,
+                    total_base_score: 0,
+                    reputation_tier: 'newcomer',
+                    completed_onboarding: false,
+                    has_degree: false,
+                    has_certification: false,
+                    github_username: null,
+                    github_data: null,
+                    education_proofs: null,
+                    github_proofs: null
+                })
 
                 // Auto-expand the next step after GitHub connection
                 const urlParams = new URLSearchParams(window.location.search)
                 const githubConnected = urlParams.get('github_connected')
-                if (githubConnected === 'true' && !data.credentials.has_degree && !data.credentials.has_certification) {
+                if (githubConnected === 'true' && !data.zkCredentials?.has_degree && !data.zkCredentials?.has_certification) {
                     setCurrentStep('education')
                 }
             } else {
@@ -143,16 +156,8 @@ export function ZKOnboarding() {
             // Calculate final base reputation score
             const finalScore = credentials.education_score + credentials.github_score
 
-            // Update the credentials with completed status
-            const response = await fetch(`/api/zk-credentials/${address}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    total_base_score: finalScore,
-                    completed_onboarding: true,
-                    reputation_tier: getReputationTier(finalScore)
-                })
-            })
+            // Refresh credentials to get updated data
+            const response = await fetch(`/api/zk-reputation?walletAddress=${address}&action=get_reputation`)
 
             if (response.ok) {
                 alert(`🎉 ZK Proof Reputation Generated!\n\n` +
@@ -211,7 +216,7 @@ export function ZKOnboarding() {
         {
             id: 'education',
             title: 'Education Credentials',
-            description: 'Upload your degree or certification (zkPDF verification required)',
+            description: 'Upload your degree or certification (zkPDF verification grants base ZK reputation)',
             icon: GraduationCap,
             completed: (credentials.has_degree || credentials.has_certification) && credentials.education_score > 0,
             score: credentials.education_score,
@@ -220,7 +225,7 @@ export function ZKOnboarding() {
         {
             id: 'github',
             title: 'GitHub Developer Profile',
-            description: 'Connect GitHub account (zkPDF-style proof required)',
+            description: 'Connect GitHub account (zkPDF-style proof grants base ZK reputation)',
             icon: Github,
             completed: credentials.github_username !== null && credentials.github_score > 0,
             score: credentials.github_score,
@@ -244,25 +249,25 @@ export function ZKOnboarding() {
     const canAccessNetworking = hasGeneratedBaseReputation // Only after zkPDF proofs generated
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 max-w-4xl mx-auto">
             {/* Main ZK Registry Card */}
             <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
-                <div className="flex items-center justify-between mb-4">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-4">
-                        <Logo className="h-12 w-12" />
-                        <div>
+                        <Logo className="h-12 w-12 flex-shrink-0" />
+                        <div className="min-w-0">
                             <h2 className="text-2xl font-pixel text-primary">ZK Proof Registry</h2>
                             <p className="text-muted-foreground text-sm">
                                 Build your verifiable reputation through ZK proofs
                             </p>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <Badge variant="outline" className="font-pixel text-lg px-4 py-2 mb-2">
+                    <div className="flex flex-col sm:items-end gap-2">
+                        <Badge variant="outline" className="font-pixel text-lg px-4 py-2 w-fit">
                             {credentials.reputation_tier.toUpperCase()}
                         </Badge>
-                        <div className="text-xs text-muted-foreground">
-                            {/* Show ENS name with priority, wallet as fallback */}
+                        <div className="text-xs text-muted-foreground text-center sm:text-right">
                             {address && (
                                 <div>
                                     <span className="text-primary font-medium">User </span>
@@ -278,32 +283,42 @@ export function ZKOnboarding() {
                     </div>
                 </div>
 
+                {/* Base Reputation Info */}
+                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 font-medium text-sm">
+                        🎯 Base ZK Reputation: Each zkPDF proof grants permanent base reputation points
+                    </p>
+                    <p className="text-blue-700 text-xs mt-1">
+                        GitHub + Academic proofs = Your foundation reputation score
+                    </p>
+                </div>
+
                 {/* Progress Bar */}
-                <div className="mb-6">
-                    <div className="flex justify-between items-center mb-2">
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-3">
                         <span className="text-sm font-medium">Base Reputation Score</span>
-                        <span className="text-sm font-pixel">
+                        <span className="text-sm font-pixel text-primary">
                             {credentials.total_base_score} / 400
                         </span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-3 pixel-border">
+                    <div className="w-full bg-muted rounded-full h-4 pixel-border">
                         <div
-                            className="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-500"
+                            className="bg-gradient-to-r from-primary to-accent h-4 rounded-full transition-all duration-500"
                             style={{ width: `${Math.max(totalProgress, 5)}%` }}
                         />
                     </div>
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>Newcomer (0)</span>
-                        <span>Student (100)</span>
-                        <span>Developer (200)</span>
-                        <span>Senior (300)</span>
-                        <span>Expert (400)</span>
+                    <div className="flex justify-between text-xs text-muted-foreground mt-3">
+                        <span className="text-center">Newcomer<br/>(0)</span>
+                        <span className="text-center">Student<br/>(100)</span>
+                        <span className="text-center">Developer<br/>(200)</span>
+                        <span className="text-center">Senior<br/>(300)</span>
+                        <span className="text-center">Expert<br/>(400)</span>
                     </div>
                 </div>
 
                 {/* Access Status */}
                 {hasGeneratedBaseReputation ? (
-                    <div className="space-y-4 mb-4">
+                    <div className="space-y-6 mb-6">
                         <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                             <CheckCircle className="h-5 w-5 text-green-500" />
                             <span className="text-sm">
@@ -324,7 +339,7 @@ export function ZKOnboarding() {
                         </div>
 
                         {/* Phase 2 Features - Self ZK Verify & Vote */}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <PixelButton
                                 variant="accent"
                                 onClick={() => {
@@ -408,18 +423,21 @@ export function ZKOnboarding() {
                                                 }
                                             }
 
-                                            const githubResponse = await fetch('/api/zk-proofs/github-clean', {
+                                            const githubResponse = await fetch('/api/zk-reputation', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
                                                     walletAddress: address,
-                                                    githubUsername: credentials.github_username,
-                                                    githubStats: {
-                                                        publicRepos: githubData.publicRepos || 5,
-                                                        totalCommits: githubData.totalCommits || 50,
-                                                        languages: githubData.languages || ['JavaScript'],
-                                                        accountCreated: githubData.accountCreated || new Date().toISOString(),
-                                                        followers: githubData.followers || 10
+                                                    action: 'generate_github_proof',
+                                                    data: {
+                                                        githubUsername: credentials.github_username,
+                                                        githubStats: {
+                                                            publicRepos: githubData.publicRepos || 5,
+                                                            totalCommits: githubData.totalCommits || 50,
+                                                            languages: githubData.languages || ['JavaScript'],
+                                                            accountCreated: githubData.accountCreated || new Date().toISOString(),
+                                                            followers: githubData.followers || 10
+                                                        }
                                                     }
                                                 })
                                             })
@@ -427,7 +445,7 @@ export function ZKOnboarding() {
                                             if (githubResponse.ok) {
                                                 const githubResult = await githubResponse.json()
                                                 if (githubResult.success) {
-                                                    results.push(`✅ GitHub zkPDF proof: ${githubResult.scoreAwarded} points`)
+                                                    results.push(`✅ GitHub zkPDF proof: ${githubResult.proof.score} points`)
                                                     console.log('✅ GitHub zkPDF proof generated successfully')
                                                     // Refresh credentials immediately to show updated score
                                                     await fetchCredentials()
@@ -469,15 +487,23 @@ export function ZKOnboarding() {
                                                         formData.append('institution', institution)
                                                         formData.append('walletAddress', address)
 
-                                                        const academicResponse = await fetch('/api/zk-proofs/academic', {
+                                                        const academicResponse = await fetch('/api/zk-reputation', {
                                                             method: 'POST',
-                                                            body: formData
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                walletAddress: address,
+                                                                action: 'generate_academic_proof',
+                                                                data: {
+                                                                    degreeType: degreeType,
+                                                                    institution: institution
+                                                                }
+                                                            })
                                                         })
 
                                                         if (academicResponse.ok) {
                                                             const academicResult = await academicResponse.json()
                                                             if (academicResult.success) {
-                                                                results.push(`✅ Academic zkPDF proof: ${academicResult.scoreAwarded} points`)
+                                                                results.push(`✅ Academic zkPDF proof: ${academicResult.proof.score} points`)
                                                                 console.log('✅ Academic zkPDF proof generated successfully')
                                                                 // Refresh credentials immediately to show updated score
                                                                 await fetchCredentials()
@@ -564,7 +590,7 @@ export function ZKOnboarding() {
             </Card>
 
             {/* Onboarding Steps */}
-            <div className="grid gap-4">
+            <div className="grid gap-6">
                 {steps.map((step) => {
                     const StepIcon = step.icon
                     const isActive = currentStep === step.id
@@ -626,7 +652,7 @@ export function ZKOnboarding() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-wrap gap-4 justify-center mt-8">
                 {!hasGeneratedBaseReputation && (
                     <div className="flex gap-2">
                         {!credentials.has_degree && !credentials.has_certification && (
@@ -807,9 +833,17 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
             const controller = new AbortController()
             const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
-            const response = await fetch('/api/zk-proofs/academic', {
+            const response = await fetch('/api/zk-reputation', {
                 method: 'POST',
-                body: formData,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletAddress: address,
+                    action: 'generate_academic_proof',
+                    data: {
+                        degreeType: degreeType,
+                        institution: institution
+                    }
+                }),
                 signal: controller.signal
             })
 
@@ -824,7 +858,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
             if (result.success) {
                 setZkProofStatus('verifying')
-                setProofDetails(result.zkpdfProof)
+                setProofDetails(result.proof)
 
                 // Small delay to show verification step
                 await new Promise(resolve => setTimeout(resolve, 1500))
@@ -833,13 +867,13 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
                 // Show success message with zkPDF details
                 alert(`🏆 zkPDF Academic Proof Generated!\n\n` +
-                    `✅ Degree: ${result.degreeType}\n` +
-                    `✅ Institution: ${result.institution}\n` +
-                    `✅ Reputation Points: ${result.scoreAwarded}\n` +
-                    `✅ Proof ID: ${result.zkpdfProof.proofId}\n\n` +
+                    `✅ Degree: ${result.academic.degreeType}\n` +
+                    `✅ Institution: ${result.academic.institution}\n` +
+                    `✅ Reputation Points: ${result.proof.score}\n` +
+                    `✅ Proof ID: ${result.proof.proofId}\n\n` +
                     `🔒 Privacy Protected: Student details hidden via ZK commitment\n` +
-                    `🔍 Commitment: ${result.zkpdfProof.proofId.substring(0, 16)}...\n` +
-                    `🚫 Nullifier: ${result.zkpdfProof.zkpdfNullifier || 'generated'}...\n\n` +
+                    `🔍 Commitment: ${result.proof.commitment.substring(0, 16)}...\n` +
+                    `🚫 Nullifier: ${result.proof.nullifier.substring(0, 16)}...\n\n` +
                     `Your academic credentials are now ZK-verified!`)
 
                 onUpdate()

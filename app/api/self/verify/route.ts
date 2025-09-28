@@ -39,11 +39,13 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Store verification data in database
+        const walletAddr = walletAddress?.toLowerCase() || userIdentifier.toLowerCase();
+
+        // Store verification data in self_verifications table
         const { data: verification, error: verificationError } = await supabase
             .from('self_verifications')
             .upsert({
-                wallet_address: walletAddress?.toLowerCase() || userIdentifier.toLowerCase(),
+                wallet_address: walletAddr,
                 nationality: nationality,
                 gender: gender,
                 age: age,
@@ -62,6 +64,27 @@ export async function POST(request: NextRequest) {
             console.error('Error storing verification:', verificationError);
             return NextResponse.json({ 
                 error: 'Failed to store verification data' 
+            }, { status: 500 });
+        }
+
+        // Update users table with demographic data and verification status
+        const { error: userUpdateError } = await supabase
+            .from('users')
+            .update({
+                nationality: nationality,
+                gender: gender,
+                age: age,
+                self_verified: true,
+                verification_level: 3, // Level 3 = Self Protocol verified
+                voting_eligible: true,
+                updated_at: new Date().toISOString()
+            })
+            .eq('wallet_address', walletAddr);
+
+        if (userUpdateError) {
+            console.error('Error updating user demographics:', userUpdateError);
+            return NextResponse.json({ 
+                error: 'Failed to update user demographic data' 
             }, { status: 500 });
         }
 

@@ -23,10 +23,10 @@ export default function ProfilePage() {
       setUser(data.users?.[0] || null)
 
       // Fetch zkPDF credentials
-      const zkRes = await fetch(`/api/zk-credentials/${address}`)
+      const zkRes = await fetch(`/api/zk-reputation?walletAddress=${address}&action=get_reputation`)
       if (zkRes.ok) {
         const zkData = await zkRes.json()
-        setZkCredentials(zkData.credentials)
+        setZkCredentials(zkData.zkCredentials)
       }
 
       // Fetch votes

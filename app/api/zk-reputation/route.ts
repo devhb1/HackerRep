@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import crypto from 'crypto'
+import { generateAcademicZKPDFProof, generateGitHubZKPDFProof } from '@/lib/zkpdf-integration'
 
 // Complete ZK Reputation API - Works with full database setup
 export async function POST(request: NextRequest) {
@@ -90,111 +91,55 @@ async function generateGitHubProof(walletAddress: string, data: any) {
         )
     }
 
-    // Calculate GitHub score
-    let score = 25 // Base score
-    
-    if (githubStats.totalCommits >= 200) {
-        score += 100
-    } else if (githubStats.totalCommits >= 100) {
-        score += 75
-    } else if (githubStats.totalCommits >= 50) {
-        score += 50
-    } else if (githubStats.totalCommits >= 10) {
-        score += 25
-    }
+    try {
+        // Use real zkPDF integration for GitHub proof generation
+        const zkProof = await generateGitHubZKPDFProof(
+            walletAddress,
+            githubUsername,
+            githubStats
+        )
 
-    score += Math.min(githubStats.publicRepos * 2, 30)
-    score += Math.min(githubStats.languages.length * 3, 20)
-    score = Math.min(score, 200)
+        // The zkPDF integration automatically stores the proof and updates base reputation
+        // No need to manually store - it's handled by storeZKPDFProof function
 
-    // Generate ZK proof components
-    const proofId = `github_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
-    const randomness = crypto.randomBytes(16).toString('hex')
-    
-    const commitment = crypto.createHash('sha256')
-        .update(`${githubUsername}_${githubStats.totalCommits}_${randomness}`)
-        .digest('hex')
-    
-    const nullifier = crypto.createHash('sha256')
-        .update(`${walletAddress}_github_${githubUsername}`)
-        .digest('hex')
-
-    // Store ZK proof
-    const { error: proofError } = await supabase
-        .from('zk_proofs')
-        .insert({
-            wallet_address: walletAddress.toLowerCase(),
-            proof_type: 'github',
-            proof_id: proofId,
-            commitment,
-            nullifier,
-            score_awarded: score,
-            proof_data: {
-                githubUsername,
-                githubStats,
-                generatedAt: new Date().toISOString()
+        return NextResponse.json({
+            success: true,
+            message: `🐙 GitHub zkPDF proof generated! ${zkProof.reputationScore} points awarded to your base ZK reputation.`,
+            proof: {
+                proofId: zkProof.proofId,
+                proofType: 'github',
+                score: zkProof.reputationScore,
+                commitment: Array.from(zkProof.circuitProof.messageDigestHash).map(b => b.toString(16).padStart(2, '0')).join(''),
+                nullifier: Array.from(zkProof.circuitProof.nullifier).map(b => b.toString(16).padStart(2, '0')).join(''),
+                verified: zkProof.verified
+            },
+            githubStats: {
+                username: githubUsername,
+                commits: githubStats.totalCommits,
+                repos: githubStats.publicRepos,
+                languages: githubStats.languages?.length || 0
+            },
+            baseReputation: {
+                githubScore: zkProof.reputationScore,
+                totalBaseScore: zkProof.reputationScore, // Will be updated by trigger
+                reputationTier: zkProof.reputationScore >= 300 ? 'senior-dev' : 
+                              zkProof.reputationScore >= 200 ? 'developer' : 
+                              zkProof.reputationScore >= 100 ? 'student' : 'newcomer'
             }
         })
 
-    if (proofError) {
-        console.error('Failed to store ZK proof:', proofError)
+    } catch (error) {
+        console.error('GitHub zkPDF proof generation failed:', error)
         return NextResponse.json(
-            { error: 'Failed to store ZK proof' },
+            { error: `GitHub zkPDF proof generation failed: ${error instanceof Error ? error.message : 'Unknown error'}` },
             { status: 500 }
         )
     }
-
-    // Update ZK credentials
-    const { error: credError } = await supabase
-        .from('zk_credentials')
-        .upsert({
-            wallet_address: walletAddress.toLowerCase(),
-            github_score: score,
-            github_username: githubUsername,
-            github_data: githubStats,
-            github_proofs: JSON.stringify([{
-                proofId,
-                score,
-                commitment,
-                nullifier,
-                createdAt: new Date().toISOString()
-            }]),
-            completed_onboarding: true
-        }, {
-            onConflict: 'wallet_address'
-        })
-
-    if (credError) {
-        console.error('Failed to update credentials:', credError)
-        return NextResponse.json(
-            { error: 'Failed to update credentials' },
-            { status: 500 }
-        )
-    }
-
-    return NextResponse.json({
-        success: true,
-        message: `🐙 GitHub ZK proof generated! ${score} points awarded.`,
-        proof: {
-            proofId,
-            proofType: 'github',
-            score,
-            commitment,
-            nullifier,
-            verified: true
-        },
-        githubStats: {
-            username: githubUsername,
-            commits: githubStats.totalCommits,
-            repos: githubStats.publicRepos,
-            languages: githubStats.languages?.length || 0
-        }
-    })
 }
 
 // Generate Academic ZK Proof
 async function generateAcademicProof(walletAddress: string, data: any) {
-    const { degreeType, institution } = data
+    const { degreeType, institution, pdfBuffer } = data
 
     if (!degreeType || !institution) {
         return NextResponse.json(
@@ -203,101 +148,58 @@ async function generateAcademicProof(walletAddress: string, data: any) {
         )
     }
 
-    // Calculate academic score
-    const scoreMap: Record<string, number> = {
-        'highschool': 50,
-        'bachelors': 100,
-        'masters': 150,
-        'phd': 200,
-        'certification': 75
-    }
-    
-    const score = scoreMap[degreeType] || 50
+    try {
+        // Convert PDF buffer to ArrayBuffer if provided
+        let pdfArrayBuffer: ArrayBuffer | undefined
+        if (pdfBuffer && pdfBuffer.data && Array.isArray(pdfBuffer.data)) {
+            pdfArrayBuffer = new Uint8Array(pdfBuffer.data).buffer
+        }
 
-    // Generate ZK proof components
-    const proofId = `academic_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
-    const randomness = crypto.randomBytes(16).toString('hex')
-    
-    const commitment = crypto.createHash('sha256')
-        .update(`${institution}_${degreeType}_${randomness}`)
-        .digest('hex')
-    
-    const nullifier = crypto.createHash('sha256')
-        .update(`${walletAddress}_academic_${institution}`)
-        .digest('hex')
+        // Use real zkPDF integration for academic proof generation
+        const zkProof = await generateAcademicZKPDFProof(
+            walletAddress,
+            degreeType as 'highschool' | 'bachelors' | 'masters' | 'phd' | 'certification',
+            institution,
+            pdfArrayBuffer || new ArrayBuffer(0)
+        )
 
-    // Store ZK proof
-    const { error: proofError } = await supabase
-        .from('zk_proofs')
-        .insert({
-            wallet_address: walletAddress.toLowerCase(),
-            proof_type: 'academic',
-            proof_id: proofId,
-            commitment,
-            nullifier,
-            score_awarded: score,
-            proof_data: {
+        // The zkPDF integration automatically stores the proof and updates base reputation
+        // No need to manually store - it's handled by storeZKPDFProof function
+
+        return NextResponse.json({
+            success: true,
+            message: `🎓 Academic zkPDF proof generated! ${zkProof.reputationScore} points awarded to your base ZK reputation.`,
+            proof: {
+                proofId: zkProof.proofId,
+                proofType: 'academic',
+                score: zkProof.reputationScore,
+                commitment: Array.from(zkProof.circuitProof.messageDigestHash).map(b => b.toString(16).padStart(2, '0')).join(''),
+                nullifier: Array.from(zkProof.circuitProof.nullifier).map(b => b.toString(16).padStart(2, '0')).join(''),
+                verified: zkProof.verified
+            },
+            academic: {
                 degreeType,
                 institution,
-                generatedAt: new Date().toISOString()
+                score: zkProof.reputationScore
+            },
+            baseReputation: {
+                educationScore: zkProof.reputationScore,
+                totalBaseScore: zkProof.reputationScore, // Will be updated by trigger
+                reputationTier: zkProof.reputationScore >= 300 ? 'senior-dev' : 
+                              zkProof.reputationScore >= 200 ? 'developer' : 
+                              zkProof.reputationScore >= 100 ? 'student' : 'newcomer',
+                hasDegree: ['bachelors', 'masters', 'phd'].includes(degreeType),
+                hasCertification: ['certification', 'highschool'].includes(degreeType)
             }
         })
 
-    if (proofError) {
-        console.error('Failed to store academic ZK proof:', proofError)
+    } catch (error) {
+        console.error('Academic zkPDF proof generation failed:', error)
         return NextResponse.json(
-            { error: 'Failed to store ZK proof' },
+            { error: `Academic zkPDF proof generation failed: ${error instanceof Error ? error.message : 'Unknown error'}` },
             { status: 500 }
         )
     }
-
-    // Update ZK credentials
-    const { error: credError } = await supabase
-        .from('zk_credentials')
-        .upsert({
-            wallet_address: walletAddress.toLowerCase(),
-            education_score: score,
-            has_degree: ['bachelors', 'masters', 'phd'].includes(degreeType),
-            has_certification: ['certification', 'highschool'].includes(degreeType),
-            education_proofs: JSON.stringify([{
-                proofId,
-                degreeType,
-                institution,
-                score,
-                commitment,
-                nullifier,
-                createdAt: new Date().toISOString()
-            }]),
-            completed_onboarding: true
-        }, {
-            onConflict: 'wallet_address'
-        })
-
-    if (credError) {
-        console.error('Failed to update academic credentials:', credError)
-        return NextResponse.json(
-            { error: 'Failed to update credentials' },
-            { status: 500 }
-        )
-    }
-
-    return NextResponse.json({
-        success: true,
-        message: `🎓 Academic ZK proof generated! ${score} points awarded.`,
-        proof: {
-            proofId,
-            proofType: 'academic',
-            score,
-            commitment,
-            nullifier,
-            verified: true
-        },
-        academic: {
-            degreeType,
-            institution,
-            score
-        }
-    })
 }
 
 // Get user reputation

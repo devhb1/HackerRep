@@ -103,14 +103,14 @@ export default function HomePage() {
 
     setLoadingCredentials(true)
     try {
-      const response = await fetch(`/api/zk-credentials/${address}`)
+      const response = await fetch(`/api/zk-reputation?walletAddress=${address}&action=get_reputation`)
       if (response.ok) {
         const data = await response.json()
-        setZkCredentials(data.credentials)
+        setZkCredentials(data.zkCredentials)
 
         // Show onboarding if user hasn't completed it or has low base score
-        const needsOnboarding = !data.credentials.completed_onboarding ||
-          data.credentials.total_base_score < 50
+        const needsOnboarding = !data.zkCredentials?.completed_onboarding ||
+          (data.zkCredentials?.total_base_score || 0) < 50
         setShowOnboarding(needsOnboarding)
       } else if (response.status === 404) {
         // User doesn't have ZK credentials yet - show onboarding

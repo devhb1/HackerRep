@@ -19,66 +19,23 @@ export default function SetupPage() {
                 setSetupStatus('✅ Database is already set up and working!')
             } else {
                 setSetupStatus(`
-❌ Database tables need to be created. 
+❌ Database needs to be updated to the latest schema. 
 
-Please go to your Supabase Dashboard → SQL Editor and run:
+Please go to your Supabase Dashboard → SQL Editor and run the FIXED_DATABASE_SETUP.sql script.
 
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  wallet_address TEXT UNIQUE NOT NULL,
-  ens_name TEXT UNIQUE,
-  display_name TEXT NOT NULL,
-  avatar_url TEXT,
-  reputation INTEGER DEFAULT 100,
-  total_upvotes INTEGER DEFAULT 0,
-  total_downvotes INTEGER DEFAULT 0,
-  total_connections INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+This will create all the required tables for:
+- Level 1: ZK Proof reputation system
+- Level 2: Self Protocol verification  
+- Level 3: Cultural intelligence voting
 
--- Connection requests table
-CREATE TABLE IF NOT EXISTS connection_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id UUID REFERENCES users(id),
-  target_id UUID REFERENCES users(id),
-  status TEXT CHECK (status IN ('pending', 'accepted', 'rejected', 'expired')) DEFAULT 'pending',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '10 minutes'),
-  accepted_at TIMESTAMP WITH TIME ZONE,
-  UNIQUE(requester_id, target_id)
-);
+The script includes:
+✅ Users table with reputation scoring
+✅ ZK credentials and proofs tables
+✅ Self Protocol verification tables
+✅ Voting system with demographic intelligence
+✅ All necessary indexes and triggers
 
--- Votes table
-CREATE TABLE IF NOT EXISTS votes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  voter_id UUID REFERENCES users(id),
-  voted_for_id UUID REFERENCES users(id),
-  vote_type TEXT CHECK (vote_type IN ('upvote', 'downvote')) NOT NULL,
-  connection_request_id UUID REFERENCES connection_requests(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(voter_id, voted_for_id)
-);
-
--- Activities table
-CREATE TABLE IF NOT EXISTS activities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  activity_type TEXT NOT NULL,
-  description TEXT NOT NULL,
-  target_user_id UUID REFERENCES users(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_users_wallet ON users(wallet_address);
-CREATE INDEX IF NOT EXISTS idx_users_ens ON users(ens_name);
-CREATE INDEX IF NOT EXISTS idx_connection_status ON connection_requests(status);
-CREATE INDEX IF NOT EXISTS idx_votes_voter ON votes(voter_id);
-CREATE INDEX IF NOT EXISTS idx_activities_created ON activities(created_at);
-
-Then refresh this page and try again!
+After running the script, refresh this page to verify the setup!
         `)
             }
         } catch (error) {

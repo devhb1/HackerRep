@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
         console.log(`🧪 Testing Level 1 ZK proof generation: ${testType}`)
 
         if (testType === 'github') {
-            // Test GitHub ZK proof generation using main API
+            // Test GitHub ZK proof generation using main API with realistic data
             const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -25,11 +25,13 @@ export async function POST(request: NextRequest) {
                     walletAddress,
                     action: 'generate_github_proof',
                     data: {
-                        githubUsername: 'testuser',
+                        githubUsername: `testuser_${Date.now()}`,
                         githubStats: {
-                            publicRepos: 10,
-                            totalCommits: 50,
-                            languages: ['TypeScript', 'JavaScript', 'Python']
+                            publicRepos: Math.floor(Math.random() * 20) + 5,
+                            totalCommits: Math.floor(Math.random() * 200) + 50,
+                            languages: ['TypeScript', 'JavaScript', 'Python', 'Rust', 'Go'].slice(0, Math.floor(Math.random() * 3) + 2),
+                            accountCreated: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000 * 3).toISOString(),
+                            followers: Math.floor(Math.random() * 100) + 10
                         }
                     }
                 })
@@ -50,7 +52,10 @@ export async function POST(request: NextRequest) {
         }
 
         if (testType === 'academic') {
-            // Test Academic ZK proof generation using main API
+            // Test Academic ZK proof generation using main API with realistic data
+            const degreeTypes = ['highschool', 'bachelors', 'masters', 'phd', 'certification']
+            const institutions = ['MIT', 'Stanford University', 'IIT Delhi', 'University of California', 'Oxford University', 'Harvard University']
+            
             const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -58,8 +63,8 @@ export async function POST(request: NextRequest) {
                     walletAddress,
                     action: 'generate_academic_proof',
                     data: {
-                        degreeType: 'bachelors',
-                        institution: 'Test University'
+                        degreeType: degreeTypes[Math.floor(Math.random() * degreeTypes.length)],
+                        institution: institutions[Math.floor(Math.random() * institutions.length)]
                     }
                 })
             })
@@ -78,7 +83,7 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // Test both GitHub and Academic ZK proof generation
+        // Test both GitHub and Academic ZK proof generation with realistic data
         const githubResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -86,16 +91,21 @@ export async function POST(request: NextRequest) {
                 walletAddress,
                 action: 'generate_github_proof',
                 data: {
-                    githubUsername: 'testuser',
+                    githubUsername: `testuser_${Date.now()}`,
                     githubStats: {
-                        publicRepos: 10,
-                        totalCommits: 50,
-                        languages: ['TypeScript', 'JavaScript', 'Python']
+                        publicRepos: Math.floor(Math.random() * 20) + 5,
+                        totalCommits: Math.floor(Math.random() * 200) + 50,
+                        languages: ['TypeScript', 'JavaScript', 'Python', 'Rust', 'Go'].slice(0, Math.floor(Math.random() * 3) + 2),
+                        accountCreated: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000 * 3).toISOString(),
+                        followers: Math.floor(Math.random() * 100) + 10
                     }
                 }
             })
         })
 
+        const degreeTypes = ['highschool', 'bachelors', 'masters', 'phd', 'certification']
+        const institutions = ['MIT', 'Stanford University', 'IIT Delhi', 'University of California', 'Oxford University', 'Harvard University']
+        
         const academicResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/zk-reputation`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -103,8 +113,8 @@ export async function POST(request: NextRequest) {
                 walletAddress,
                 action: 'generate_academic_proof',
                 data: {
-                    degreeType: 'bachelors',
-                    institution: 'Test University'
+                    degreeType: degreeTypes[Math.floor(Math.random() * degreeTypes.length)],
+                    institution: institutions[Math.floor(Math.random() * institutions.length)]
                 }
             })
         })
