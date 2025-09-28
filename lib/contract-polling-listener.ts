@@ -24,16 +24,23 @@ export class ContractPollingListener {
     this.provider = new ethers.JsonRpcProvider(CELO_RPC_URL);
     this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.provider);
     
-    // Initialize Supabase client
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Initialize Supabase client - only if environment variables are available
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      this.supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+    }
   }
 
   async startPolling() {
     if (this.isRunning) {
       console.log('🔄 Polling listener already running');
+      return;
+    }
+
+    if (!this.supabase) {
+      console.log('⚠️ Supabase client not initialized - environment variables missing');
       return;
     }
 
@@ -343,5 +350,20 @@ export class ContractPollingListener {
   }
 }
 
-// Export singleton instance
-export const contractPollingListener = new ContractPollingListener();
+// Factory function to create listener instance
+let listenerInstance: ContractPollingListener | null = null;
+
+export function getContractPollingListener(): ContractPollingListener {
+  if (!listenerInstance) {
+    listenerInstance = new ContractPollingListener();
+  }
+  return listenerInstance;
+}
+
+// For backward compatibility
+export const contractPollingListener = {
+  startPolling: () => getContractPollingListener().startPolling(),
+  stopPolling: () => getContractPollingListener().stopPolling(),
+  isListenerRunning: () => getContractPollingListener().isListenerRunning(),
+  getLastProcessedBlock: () => getContractPollingListener().getLastProcessedBlock()
+};

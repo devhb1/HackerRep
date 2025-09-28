@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { contractPollingListener } from '@/lib/contract-polling-listener';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Starting HackerRep contract event listener...');
+    
+    // Dynamic import to avoid build-time execution
+    const { contractPollingListener } = await import('@/lib/contract-polling-listener');
     
     // Start the polling listener
     await contractPollingListener.startPolling();
@@ -31,6 +33,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     console.log('🛑 Stopping HackerRep contract event listener...');
+    
+    // Dynamic import to avoid build-time execution
+    const { contractPollingListener } = await import('@/lib/contract-polling-listener');
     
     // Stop the polling listener
     await contractPollingListener.stopPolling();
