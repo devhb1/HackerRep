@@ -63,7 +63,7 @@ export default function SelfVerifyPage() {
           version: 2,
           appName: "HackerRep Identity Verification",
           scope: "hackerrep-verification",
-          endpoint: `${process.env.NEXT_PUBLIC_SELF_ENDPOINT || 'http://localhost:3000'}/api/self/verify`,
+          endpoint: "https://hacker-rep.vercel.app/api/self/verify",
           logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
           userId: walletAddress,
           endpointType: "celo",
@@ -259,9 +259,9 @@ export default function SelfVerifyPage() {
         <div className="flex flex-col items-center gap-2 mt-2">
           <span className="text-gray-500 text-xs uppercase tracking-wide">Your Wallet Address</span>
           <div className="bg-gray-100 rounded-md px-3 py-2 w-full text-center break-all text-sm font-mono text-gray-800 border border-gray-200">
-            {userId && userId !== ethers.ZeroAddress ? userId : <span className="text-gray-400">Connecting wallet...</span>}
+            {walletAddress && walletAddress !== ethers.ZeroAddress ? walletAddress : <span className="text-gray-400">Connecting wallet...</span>}
           </div>
-          {userId && userId !== ethers.ZeroAddress && (
+          {walletAddress && walletAddress !== ethers.ZeroAddress && (
             <p className="text-xs text-green-600 mt-1">
               ✅ Ready for verification
             </p>
