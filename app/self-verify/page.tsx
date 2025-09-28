@@ -39,23 +39,28 @@ export default function SelfVerifyPage() {
   // Handle client-side mounting and get wallet address
   useEffect(() => {
     setMounted(true);
-    
+
     // Only run on client side
     if (typeof window === 'undefined') return;
-    
+
     // Get wallet address from URL params or localStorage
     const urlParams = new URLSearchParams(window.location.search);
     const addressFromUrl = urlParams.get('address');
     const addressFromStorage = localStorage.getItem('walletAddress');
-    const address = addressFromUrl || addressFromStorage || '0xd1c9BD2a14b00C99803B5Ded4571814D227566C7';
-    
+    let address = addressFromUrl || addressFromStorage || '0xd1c9BD2a14b00C99803B5Ded4571814D227566C7';
+
+    // Ensure address is in proper format (checksummed)
+    if (address && ethers.isAddress(address)) {
+      address = ethers.getAddress(address); // This normalizes the address
+    }
+
     setWalletAddress(address);
   }, []);
 
   // Initialize Self App
   useEffect(() => {
     if (!mounted || !walletAddress) return;
-    
+
     const initializeSelfApp = async () => {
       // Reset error state on retry
       if (retryCount > 0) {
@@ -65,18 +70,20 @@ export default function SelfVerifyPage() {
         setIsLoading(true);
         console.log("Starting Self App initialization...");
         console.log("Wallet address:", walletAddress);
-        
+
         // Create a robust Self App configuration with better error handling
         // Use current deployment URL (works for preview branches and production)
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin :
           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://hacker-rep.vercel.app');
-        const endpoint = process.env.NEXT_PUBLIC_SELF_ENDPOINT || `${baseUrl}/api/self/verify`;
         
+        // Self Protocol expects the endpoint without /api prefix
+        const endpoint = `${baseUrl}/api/self/verify`;
+
         console.log("Using Self endpoint:", endpoint);
         console.log("Wallet address:", walletAddress);
         console.log("Base URL:", baseUrl);
-        console.log("Endpoint type: http");
-        
+        console.log("Endpoint type: https");
+
         // Validate endpoint URL
         try {
           new URL(endpoint);
@@ -85,11 +92,11 @@ export default function SelfVerifyPage() {
           console.error("❌ Invalid endpoint URL:", urlError);
           throw new Error(`Invalid endpoint URL: ${endpoint}`);
         }
-        
+
         console.log("Creating SelfAppBuilder with config:", {
           version: 2,
-          appName: "HackerRep Identity Verification",
-          scope: "hackerrep-verification",
+          appName: "HackerRep",
+          scope: "hacker-rep-verification",
           endpoint: endpoint,
           userId: walletAddress,
           endpointType: "https",
@@ -98,18 +105,16 @@ export default function SelfVerifyPage() {
 
         const app = new SelfAppBuilder({
           version: 2,
-          appName: "HackerRep Identity Verification",
-          scope: "hackerrep-verification",
+          appName: "HackerRep",
+          scope: "hacker-rep-verification",
           endpoint: endpoint,
-          logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
           userId: walletAddress,
           endpointType: "https",
           userIdType: "hex",
           userDefinedData: JSON.stringify({
             walletAddress: walletAddress,
             timestamp: Date.now(),
-            source: "hacker-rep",
-            contractAddress: "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db"
+            source: "hacker-rep"
           }),
           disclosures: {
             excludedCountries: excludedCountries,
@@ -124,11 +129,11 @@ export default function SelfVerifyPage() {
 
         console.log("Self App created successfully:", app);
         setSelfApp(app);
-        
+
         const universalLink = getUniversalLink(app);
         console.log("Universal link generated:", universalLink);
         setUniversalLink(universalLink);
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to initialize Self app:", error);
@@ -148,7 +153,7 @@ export default function SelfVerifyPage() {
     }, 10000); // 10 second timeout for initialization only
 
     initializeSelfApp();
-    
+
     return () => clearTimeout(timeoutId);
   }, [excludedCountries, walletAddress, mounted, retryCount]);
 

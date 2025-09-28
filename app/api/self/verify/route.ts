@@ -1,22 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, {
+        status: 200,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+    });
+}
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+        console.log('Self verification request received:', body);
         
         // Extract verification data from Self Protocol
+        // Self Protocol sends data in a specific format
         const {
             userIdentifier,
             disclosedData,
             identityCommitment,
             sessionId,
-            walletAddress
+            walletAddress,
+            proof,
+            publicSignals
         } = body;
 
-        if (!userIdentifier || !identityCommitment) {
+        if (!userIdentifier) {
             return NextResponse.json({ 
-                error: 'Missing required verification data' 
+                error: 'Missing userIdentifier' 
             }, { status: 400 });
         }
 
@@ -112,16 +128,27 @@ export async function POST(request: NextRequest) {
             age
         });
 
-        return NextResponse.json({ 
+        // Return success response in Self Protocol expected format
+        const response = NextResponse.json({ 
             success: true,
-            verification: {
+            message: "Verification successful",
+            data: {
+                userIdentifier: userIdentifier,
                 walletAddress: verification.wallet_address,
                 nationality,
                 gender,
                 age,
-                verified: true
+                verified: true,
+                timestamp: new Date().toISOString()
             }
         });
+
+        // Add CORS headers for Self Protocol
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+        return response;
 
     } catch (error) {
         console.error('Self verification error:', error);
