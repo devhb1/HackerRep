@@ -67,10 +67,14 @@ export default function SelfVerifyPage() {
         console.log("Wallet address:", walletAddress);
         
         // Create a robust Self App configuration with better error handling
-        const endpoint = process.env.NEXT_PUBLIC_SELF_ENDPOINT || (typeof window !== 'undefined' ? `${window.location.origin}/api/self/verify` : 'http://localhost:3000/api/self/verify');
+        // Use current deployment URL (works for preview branches and production)
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://hacker-rep.vercel.app');
+        const endpoint = process.env.NEXT_PUBLIC_SELF_ENDPOINT || `${baseUrl}/api/self/verify`;
         
         console.log("Using Self endpoint:", endpoint);
         console.log("Wallet address:", walletAddress);
+        console.log("Base URL:", baseUrl);
         console.log("Endpoint type: http");
         
         // Validate endpoint URL
@@ -88,7 +92,7 @@ export default function SelfVerifyPage() {
           scope: "hackerrep-verification",
           endpoint: endpoint,
           userId: walletAddress,
-          endpointType: "http",
+          endpointType: "https",
           userIdType: "hex"
         });
 
@@ -99,7 +103,7 @@ export default function SelfVerifyPage() {
           endpoint: endpoint,
           logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
           userId: walletAddress,
-          endpointType: "http",
+          endpointType: "https",
           userIdType: "hex",
           userDefinedData: JSON.stringify({
             walletAddress: walletAddress,
@@ -325,7 +329,6 @@ export default function SelfVerifyPage() {
                   console.error("Self Protocol verification error:", error);
                   displayToast("Error: Failed to verify identity. Please try again.");
                 }}
-                timeout={300000} // 5 minutes timeout for verification process
               />
               <p className="text-xs text-gray-500 mt-2">
                 Scan with Self App to verify your identity
