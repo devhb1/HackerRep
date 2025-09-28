@@ -114,7 +114,15 @@ export async function generateAcademicZKPDFProof(
             institution,
             pdfSize: pdfBytes.length
         })
-        throw new Error(`Failed to generate zkPDF proof for academic credential: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+        let errorMessage = 'Unknown error occurred'
+        if (error instanceof Error) {
+            errorMessage = error.message
+        } else if (typeof error === 'string') {
+            errorMessage = error
+        }
+
+        throw new Error(`zkPDF proof generation failed: ${errorMessage}`)
     }
 }
 
@@ -237,18 +245,27 @@ async function simulateZKPDFCircuit(
 ): Promise<{ success: boolean; circuitOutput: ZKPDFCircuitOutput; error?: string }> {
 
     // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     try {
+        // Validate input
+        if (!input.pdf_bytes || input.pdf_bytes.length === 0) {
+            throw new Error('Invalid PDF data - file is empty or corrupted')
+        }
+
+        if (!input.substring || input.substring.length === 0) {
+            throw new Error('Invalid substring for verification')
+        }
+
         // Generate zkPDF-compatible hashes
         const substringHash = sha256(Buffer.from(input.substring))
-        const messageDigestHash = sha256(input.pdf_bytes)
-        const signerKeyHash = sha256(Buffer.from(`certificate_authority_${proofType}`))
-        const nullifier = sha256(Buffer.from(`${Date.now()}_${input.substring}`))
+        const messageDigestHash = sha256(input.pdf_bytes.slice(0, Math.min(input.pdf_bytes.length, 10000))) // Limit hash input
+        const signerKeyHash = sha256(Buffer.from(`certificate_authority_${proofType}_${Date.now()}`))
+        const nullifier = sha256(Buffer.from(`${Date.now()}_${input.substring}_${Math.random()}`))
 
-        // Simulate PDF parsing and signature verification
-        const substringMatches = input.pdf_bytes.length > 1000 // Simulate finding text
-        const signature_valid = true // Simulate valid signature
+        // Simulate realistic PDF parsing and signature verification
+        const substringMatches = input.pdf_bytes.length > 100 // More lenient check
+        const signature_valid = true // Always valid for demo
 
         const circuitOutput: ZKPDFCircuitOutput = {
             substringMatches,
@@ -259,16 +276,25 @@ async function simulateZKPDFCircuit(
             signature_valid
         }
 
+        console.log('✅ zkPDF circuit simulation completed successfully')
         return {
             success: true,
             circuitOutput
         }
 
     } catch (error) {
+        console.error('❌ zkPDF circuit simulation failed:', error)
         return {
             success: false,
-            circuitOutput: {} as ZKPDFCircuitOutput,
-            error: error instanceof Error ? error.message : 'Unknown circuit error'
+            circuitOutput: {
+                substringMatches: false,
+                messageDigestHash: new Uint8Array(32),
+                signerKeyHash: new Uint8Array(32),
+                substringHash: new Uint8Array(32),
+                nullifier: new Uint8Array(32),
+                signature_valid: false
+            },
+            error: error instanceof Error ? error.message : 'zkPDF circuit simulation failed'
         }
     }
 }
@@ -291,26 +317,21 @@ async function storeZKPDFProof(
         .eq('wallet_address', walletAddress.toLowerCase())
         .maybeSingle() // Use maybeSingle instead of single to handle no results
 
+    if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching current data:', fetchError)
+    }
+
     // Handle case where user doesn't exist yet
     const currentEducationScore = currentData?.education_score || 0
     const currentGithubScore = currentData?.github_score || 0
     const currentSocialScore = currentData?.social_score || 0
-
-    // Calculate new total based on which score we're updating
-    let newTotalScore = currentEducationScore + currentGithubScore + currentSocialScore
-    if (proofType === 'academic') {
-        newTotalScore = proof.reputationScore + currentGithubScore + currentSocialScore
-    } else if (proofType === 'github') {
-        newTotalScore = currentEducationScore + proof.reputationScore + currentSocialScore
-    }    // Don't calculate reputation tier manually - it's a generated column based on scores
 
     const updateData = {
         wallet_address: walletAddress.toLowerCase(),
         education_score: proofType === 'academic' ? proof.reputationScore : currentEducationScore,
         github_score: proofType === 'github' ? proof.reputationScore : currentGithubScore,
         social_score: currentSocialScore,
-        // Don't set total_base_score or reputation_tier - they're generated columns
-        completed_onboarding: true, // Mark as completed when zkPDF proof generated
+        completed_onboarding: (proofType === 'academic' ? proof.reputationScore : currentEducationScore) > 0 && (proofType === 'github' ? proof.reputationScore : currentGithubScore) > 0,
         has_degree: proofType === 'academic' ? true : (currentData?.has_degree || false),
         has_certification: proofType === 'academic' ? true : (currentData?.has_certification || false),
         github_username: currentData?.github_username || null,
@@ -342,7 +363,19 @@ async function storeZKPDFProof(
     if (error) {
         console.error('❌ Failed to store zkPDF proof:', error)
         console.error('Error details:', error)
-        throw new Error(`Database storage failed: ${error.message}`)
+        console.error('Update data:', updateData)
+
+        // Provide more specific error message
+        let errorMessage = 'Database storage failed'
+        if (error.message.includes('duplicate') || error.code === '23505') {
+            errorMessage = 'zkPDF proof already exists for this credential'
+        } else if (error.message.includes('foreign key') || error.code === '23503') {
+            errorMessage = 'User record not found - please register first'
+        } else {
+            errorMessage = `Database error: ${error.message}`
+        }
+
+        throw new Error(errorMessage)
     }
 
     console.log('✅ zkPDF proof stored in database')

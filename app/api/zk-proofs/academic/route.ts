@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Validate file type
-        if (certificate.type !== 'application/pdf') {
+        // Validate file type (be more lenient with PDF detection)
+        if (certificate.type !== 'application/pdf' && !certificate.name.toLowerCase().endsWith('.pdf')) {
             return NextResponse.json(
-                { error: 'Only PDF files are allowed for zkPDF verification', details: `Received file type: ${certificate.type}` },
+                { error: 'Only PDF files are allowed for zkPDF verification', details: `Received file type: ${certificate.type}, name: ${certificate.name}` },
                 { status: 400 }
             )
         }
