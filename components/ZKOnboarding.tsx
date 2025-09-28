@@ -257,14 +257,14 @@ export function ZKOnboarding() {
                     <div className="flex items-center gap-4">
                         <Logo className="h-12 w-12 flex-shrink-0" />
                         <div className="min-w-0">
-                            <h2 className="text-2xl font-pixel text-primary">ZK Proof Registry</h2>
+                            <h2 className="text-2xl font-bold text-primary mb-1">HackerRep Registry</h2>
                             <p className="text-muted-foreground text-sm">
-                                Build your verifiable reputation through ZK proofs
+                                ZK-Reputation: Verifiable reputation through ZK proofs
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-col sm:items-end gap-2">
-                        <Badge variant="outline" className="font-pixel text-lg px-4 py-2 w-fit">
+                        <Badge variant="outline" className="font-bold text-lg px-4 py-2 w-fit">
                             {credentials.reputation_tier.toUpperCase()}
                         </Badge>
                         <div className="text-xs text-muted-foreground text-center sm:text-right">
@@ -308,11 +308,11 @@ export function ZKOnboarding() {
                         />
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground mt-3">
-                        <span className="text-center">Newcomer<br/>(0)</span>
-                        <span className="text-center">Student<br/>(100)</span>
-                        <span className="text-center">Developer<br/>(200)</span>
-                        <span className="text-center">Senior<br/>(300)</span>
-                        <span className="text-center">Expert<br/>(400)</span>
+                        <span className="text-center font-medium">Newcomer<br/><span className="text-gray-500">(0)</span></span>
+                        <span className="text-center font-medium">Student<br/><span className="text-gray-500">(100)</span></span>
+                        <span className="text-center font-medium">Developer<br/><span className="text-gray-500">(200)</span></span>
+                        <span className="text-center font-medium">Senior<br/><span className="text-gray-500">(300)</span></span>
+                        <span className="text-center font-medium">Expert<br/><span className="text-gray-500">(400)</span></span>
                     </div>
                 </div>
 

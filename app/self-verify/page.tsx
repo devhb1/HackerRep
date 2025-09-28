@@ -61,7 +61,7 @@ export default function SelfVerifyPage() {
         console.log("Starting Self App initialization...");
         console.log("Wallet address:", walletAddress);
         
-        // Create a simplified Self App configuration
+        // Create a robust Self App configuration with better error handling
         const app = new SelfAppBuilder({
           version: 2,
           appName: "HackerRep Identity Verification",
@@ -85,6 +85,9 @@ export default function SelfVerifyPage() {
           }
         }).build();
 
+        // Add a small delay to ensure proper initialization
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         console.log("Self App created successfully:", app);
         setSelfApp(app);
         
@@ -105,10 +108,10 @@ export default function SelfVerifyPage() {
     const timeoutId = setTimeout(() => {
       if (isLoading) {
         console.error("Self App initialization timed out");
-        setError("Self App initialization timed out. Please try again.");
+        setError("QR Code Loading Failed - Self App initialization timed out. Please try again.");
         setIsLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 15000); // 15 second timeout for better reliability
 
     initializeSelfApp();
     
