@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SelfBackendVerifier, AllIds, DefaultConfigStore } from "@selfxyz/core";
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Use service role key for backend operations to bypass RLS
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Service role bypasses RLS
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    }
+);
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -72,22 +84,22 @@ export async function POST(request: NextRequest) {
                 }, { status: 200 });
             }
 
-        // Extract wallet address from userContextData (hex string)
-        console.log('Raw userContextData:', userContextData);
-        const walletAddr = userContextData?.toLowerCase();
-        console.log('Processed wallet address:', walletAddr);            // Store verification data in self_verifications table
+            // Extract wallet address from userContextData (hex string)
+            console.log('Raw userContextData:', userContextData);
+            const walletAddr = userContextData?.toLowerCase();
+            console.log('Processed wallet address:', walletAddr);            // Store verification data in self_verifications table (using service role to bypass RLS)
             // First check if verification already exists
-            const { data: existingVerification } = await supabase
+            const { data: existingVerification } = await supabaseAdmin
                 .from('self_verifications')
                 .select('id')
                 .eq('wallet_address', walletAddr)
                 .single();
 
             let verification, verificationError;
-            
+
             if (existingVerification) {
                 // Update existing verification
-                const { data, error } = await supabase
+                const { data, error } = await supabaseAdmin
                     .from('self_verifications')
                     .update({
                         nationality: nationality,
@@ -105,7 +117,7 @@ export async function POST(request: NextRequest) {
                 verificationError = error;
             } else {
                 // Insert new verification
-                const { data, error } = await supabase
+                const { data, error } = await supabaseAdmin
                     .from('self_verifications')
                     .insert({
                         wallet_address: walletAddr,
@@ -142,7 +154,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Update users table with demographic data and verification status
-            const { error: userUpdateError } = await supabase
+            const { error: userUpdateError } = await supabaseAdmin
                 .from('users')
                 .update({
                     nationality: nationality,
