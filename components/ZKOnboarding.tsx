@@ -264,10 +264,16 @@ export function ZKOnboarding() {
                         <div className="text-xs text-muted-foreground">
                             {/* Show ENS name with priority, wallet as fallback */}
                             {address && (
-                                <span className="font-mono">
-                                    {displayName}
-                                </span>
+                                <div>
+                                    <span className="text-primary font-medium">User </span>
+                                    <span className="font-mono">
+                                        {displayName || `${address.substring(0, 6)}...${address.substring(address.length - 4)}`}
+                                    </span>
+                                </div>
                             )}
+                            <div className="mt-1">
+                                <span className="text-accent">Reputation: {credentials.total_base_score}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -277,7 +283,7 @@ export function ZKOnboarding() {
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium">Base Reputation Score</span>
                         <span className="text-sm font-pixel">
-                            {credentials.total_base_score} / 500
+                            {credentials.total_base_score} / 400
                         </span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-3 pixel-border">
@@ -290,8 +296,8 @@ export function ZKOnboarding() {
                         <span>Newcomer (0)</span>
                         <span>Student (100)</span>
                         <span>Developer (200)</span>
-                        <span>Senior (350)</span>
-                        <span>Expert (500)</span>
+                        <span>Senior (300)</span>
+                        <span>Expert (400)</span>
                     </div>
                 </div>
 

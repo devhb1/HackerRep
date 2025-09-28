@@ -22,13 +22,11 @@ export async function GET() {
                 ens_name,
                 display_name,
                 avatar_url,
-                reputation,
-                total_upvotes,
-                total_downvotes,
-                total_connections,
+                reputation_score,
+                seniority_index,
                 created_at
             `)
-            .order('reputation', { ascending: false })
+            .order('reputation_score', { ascending: false })
             .range(offset, offset + limit - 1)
 
         if (error) {
