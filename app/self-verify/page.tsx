@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { getUniversalLink } from "@selfxyz/core";
 import {
   SelfQRcodeWrapper,
   SelfAppBuilder,
   type SelfApp,
   countries,
-  getUniversalLink,
 } from "@selfxyz/qrcode";
 import { ethers } from "ethers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,7 +81,7 @@ export default function SelfVerifyPage() {
         console.log("Using Self endpoint:", endpoint);
         console.log("Wallet address:", walletAddress);
         console.log("Base URL:", baseUrl);
-        console.log("Endpoint type: staging_https");
+        console.log("Endpoint type: https (Celo mainnet)");
 
         // Validate endpoint URL
         try {
@@ -98,7 +98,7 @@ export default function SelfVerifyPage() {
           scope: "hacker-rep-verification",
           endpoint: endpoint,
           userId: walletAddress,
-          endpointType: "staging_https",
+          endpointType: "https",
           userIdType: "hex"
         });
 
@@ -107,14 +107,14 @@ export default function SelfVerifyPage() {
           appName: "HackerRep",
           scope: "hacker-rep-verification",
           endpoint: endpoint,
-          userId: walletAddress,
-          endpointType: "staging_https", // Use staging_https as per docs
-          userIdType: "hex", // CRITICAL: Must be "hex" in frontend per docs
-          userDefinedData: walletAddress, // Use wallet address as user context
+          userId: walletAddress, // Wallet address for onchain verification
+          endpointType: "https", // Use "https" for production Celo mainnet
+          userIdType: "hex", // "hex" for wallet addresses onchain
+          userDefinedData: walletAddress, // Wallet address as user context for contract
           disclosures: {
             minimumAge: 18, // Must match backend config
-            excludedCountries: [], // Must match backend - empty array
-            ofac: false, // Must match backend - false for demo
+            excludedCountries: [], // Empty - let contract handle India validation
+            ofac: false, // Let contract handle nationality filtering
             nationality: true,
             gender: true,
           }

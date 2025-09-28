@@ -51,19 +51,20 @@ contract HackerRepSelfVerification is SelfVerificationRoot {
     /**
      * @notice Constructor for the HackerRep verification contract
      * @param identityVerificationHubV2Address The address of the Identity Verification Hub V2
-     * @param scope The verification scope for HackerRep
+     * @param scopeSeed The verification scope seed for HackerRep (uint256)
      * @param _verificationConfig The verification configuration
      */
     constructor(
         address identityVerificationHubV2Address,
-        string memory scope, 
+        uint256 scopeSeed, 
         SelfUtils.UnformattedVerificationConfigV2 memory _verificationConfig
     )
-        SelfVerificationRoot(identityVerificationHubV2Address, scope)
+        SelfVerificationRoot(identityVerificationHubV2Address, scopeSeed)
     {
         verificationConfig = SelfUtils.formatVerificationConfigV2(_verificationConfig);
-        // Set a default config ID - will be updated later when hub is available
-        verificationConfigId = keccak256(abi.encodePacked(scope, block.timestamp));
+        // Register the config and get the configId
+        verificationConfigId = IIdentityVerificationHubV2(identityVerificationHubV2Address)
+            .setVerificationConfigV2(verificationConfig);
     }
 
     /**

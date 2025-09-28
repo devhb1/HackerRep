@@ -14,18 +14,18 @@ export async function OPTIONS(request: NextRequest) {
     });
 }
 
-// Initialize Self Protocol backend verifier
+// Initialize Self Protocol backend verifier for CELO MAINNET ONCHAIN VERIFICATION
 const selfBackendVerifier = new SelfBackendVerifier(
     "hacker-rep-verification", // Must match frontend scope
     "https://hacker-rep.vercel.app/api/self/verify", // Always use production URL to avoid auth protection
-    false, // mockPassport: false for production, true for testing
-    AllIds, // Accept all document types
+    false, // mockPassport: false for CELO MAINNET PRODUCTION
+    AllIds, // Accept all document types (passport, ID, Aadhaar)
     new DefaultConfigStore({
         minimumAge: 18,
-        excludedCountries: [], // Empty array - let all countries through, filter in app logic
-        ofac: false, // Disable OFAC for demo (India isn't sanctioned)
+        excludedCountries: [], // Empty - filter in contract logic for India-only
+        ofac: false, // Let contract handle nationality validation
     }),
-    "uuid" // userIdentifierType - must match docs example
+    "hex" // userIdentifierType: "hex" for SMART CONTRACT integration with wallet addresses
 );
 
 export async function POST(request: NextRequest) {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
                 status: "error",
                 result: false,
                 error_code: "MISSING_FIELDS"
-            }, { status: 400 });
+            }, { status: 200 });
         }
 
         // Use official Self Protocol backend verifier
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
                     result: false,
                     reason: "Only Indian nationality allowed for HackerRep verification",
                     error_code: "INVALID_NATIONALITY"
-                }, { status: 400 });
+                }, { status: 200 });
             }
 
             // Extract wallet address from userContextData (hex string)
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
                     result: false,
                     reason: 'Failed to store verification data',
                     error_code: "DATABASE_ERROR"
-                }, { status: 500 });
+                }, { status: 200 });
             }
 
             // Update users table with demographic data and verification status
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
                 reason: "Verification failed",
                 error_code: "VERIFICATION_FAILED",
                 details: result.isValidDetails,
-            }, { status: 400 });
+            }, { status: 200 });
         }
 
     } catch (error) {
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
             result: false,
             reason: error instanceof Error ? error.message : "Unknown error",
             error_code: "UNKNOWN_ERROR"
-        }, { status: 500 });
+        }, { status: 200 });
     }
 }
 
