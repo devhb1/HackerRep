@@ -28,6 +28,7 @@ export default function SelfVerifyPage() {
   const [mounted, setMounted] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // For HackerRep, we want to allow India only
   const excludedCountries = useMemo(() => {
@@ -56,6 +57,10 @@ export default function SelfVerifyPage() {
     if (!mounted || !walletAddress) return;
     
     const initializeSelfApp = async () => {
+      // Reset error state on retry
+      if (retryCount > 0) {
+        setError(null);
+      }
       try {
         setIsLoading(true);
         console.log("Starting Self App initialization...");
@@ -129,19 +134,25 @@ export default function SelfVerifyPage() {
       }
     };
 
-    // Add timeout to prevent hanging
+    // Add timeout to prevent hanging - only for initialization, not for QR code scanning
     const timeoutId = setTimeout(() => {
-      if (isLoading) {
+      if (isLoading && !selfApp) {
         console.error("Self App initialization timed out");
         setError("QR Code Loading Failed - Self App initialization timed out. Please try again.");
         setIsLoading(false);
       }
-    }, 15000); // 15 second timeout for better reliability
+    }, 10000); // 10 second timeout for initialization only
 
     initializeSelfApp();
     
     return () => clearTimeout(timeoutId);
-  }, [excludedCountries, walletAddress, mounted]);
+  }, [excludedCountries, walletAddress, mounted, retryCount]);
+
+  const retryInitialization = () => {
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    setIsLoading(true);
+  };
 
   const displayToast = (message: string) => {
     setToastMessage(message);
@@ -262,10 +273,10 @@ export default function SelfVerifyPage() {
           <p className="text-gray-600 mb-4">{error}</p>
           <div className="space-y-2">
             <button
-              onClick={() => window.location.reload()}
+              onClick={retryInitialization}
               className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
             >
-              Retry
+              Retry ({retryCount > 0 ? `Attempt ${retryCount + 1}` : 'Try Again'})
             </button>
             <button
               onClick={() => router.push('/')}
@@ -310,17 +321,20 @@ export default function SelfVerifyPage() {
               <SelfQRcodeWrapper
                 selfApp={selfApp}
                 onSuccess={handleSuccessfulVerification}
-                onError={() => {
-                  displayToast("Error: Failed to verify identity");
+                onError={(error) => {
+                  console.error("Self Protocol verification error:", error);
+                  displayToast("Error: Failed to verify identity. Please try again.");
                 }}
+                timeout={300000} // 5 minutes timeout for verification process
               />
               <p className="text-xs text-gray-500 mt-2">
                 Scan with Self App to verify your identity
               </p>
               <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                 <p className="text-gray-600">Wallet: {walletAddress?.substring(0, 6)}...{walletAddress?.substring(walletAddress.length - 4)}</p>
-                <p className="text-gray-600">App Status: {selfApp ? 'Ready' : 'Not Ready'}</p>
-                <p className="text-gray-600">Link: {universalLink ? 'Generated' : 'Not Generated'}</p>
+                <p className="text-gray-600">App Status: {selfApp ? '✅ Ready' : '⏳ Loading'}</p>
+                <p className="text-gray-600">Link: {universalLink ? '✅ Generated' : '⏳ Generating'}</p>
+                <p className="text-gray-600">Retry Count: {retryCount}</p>
               </div>
             </div>
           ) : (
