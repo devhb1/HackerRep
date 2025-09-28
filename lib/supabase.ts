@@ -76,8 +76,6 @@ export type ZKCredentials = {
     has_certification: boolean
     github_username: string | null
     github_data: any
-    education_proofs: any
-    github_proofs: any
     created_at: string
     updated_at: string
 }
