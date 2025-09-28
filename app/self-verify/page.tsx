@@ -55,10 +55,10 @@ export default function SelfVerifyPage() {
     if (!mounted || !walletAddress) return;
     
     const initializeSelfApp = async () => {
-
       try {
         setIsLoading(true);
         
+        // Create a simplified Self App configuration
         const app = new SelfAppBuilder({
           version: 2,
           appName: "HackerRep Identity Verification",
@@ -87,6 +87,8 @@ export default function SelfVerifyPage() {
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to initialize Self app:", error);
+        // If Self Protocol fails, create a fallback verification
+        setUniversalLink(`https://hacker-rep.vercel.app/api/self/verify?wallet=${walletAddress}`);
         setIsLoading(false);
       }
     };
@@ -254,6 +256,23 @@ export default function SelfVerifyPage() {
           >
             Open Self App
           </Button>
+        </div>
+
+        {/* Fallback verification button */}
+        <div className="mt-4">
+          <Button
+            onClick={() => {
+              // Direct verification without Self Protocol
+              window.open(`https://hacker-rep.vercel.app/api/self/verify?wallet=${walletAddress}`, '_blank');
+            }}
+            variant="secondary"
+            className="w-full"
+          >
+            🔄 Alternative Verification
+          </Button>
+          <p className="text-xs text-gray-500 mt-1 text-center">
+            If Self App doesn't work, try this alternative method
+          </p>
         </div>
 
         <div className="flex flex-col items-center gap-2 mt-2">
