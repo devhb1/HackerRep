@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessionManager } from '@/lib/session-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +12,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🔄 Creating verification session for wallet:', walletAddress);
+
+    // Dynamic import to avoid build-time execution
+    const { sessionManager } = await import('@/lib/session-manager');
 
     // Check for existing active sessions
     const existingSessions = await sessionManager.getActiveSessionsForWallet(walletAddress);

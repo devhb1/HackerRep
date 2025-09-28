@@ -1,10 +1,16 @@
 // Session Manager for Concurrent Self Protocol Verifications
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Initialize Supabase client conditionally
+const getSupabaseClient = () => {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase environment variables not configured');
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+};
 
 export interface VerificationSession {
   id: string;
@@ -39,6 +45,7 @@ export class SessionManager {
    * Create a new verification session
    */
   async createSession(walletAddress: string, selfAppConfig: any): Promise<VerificationSession> {
+    const supabase = getSupabaseClient();
     const sessionId = `hackerrep_${walletAddress}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
@@ -116,6 +123,7 @@ export class SessionManager {
       }
     }
 
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('verification_sessions')
       .update(updateData)
@@ -144,6 +152,7 @@ export class SessionManager {
     }
 
     // Check database
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('verification_sessions')
       .select('*')
@@ -178,6 +187,7 @@ export class SessionManager {
    * Get active sessions for a wallet
    */
   async getActiveSessionsForWallet(walletAddress: string): Promise<VerificationSession[]> {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('verification_sessions')
       .select('*')
@@ -217,6 +227,7 @@ export class SessionManager {
    */
   private async logSessionEvent(sessionId: string, eventType: string, eventData?: any): Promise<void> {
     try {
+      const supabase = getSupabaseClient();
       await supabase
         .from('session_events')
         .insert({
@@ -254,6 +265,7 @@ export class SessionManager {
     }
 
     // Clean database
+    const supabase = getSupabaseClient();
     await supabase
       .from('verification_sessions')
       .update({ status: 'expired' })
@@ -270,6 +282,7 @@ export class SessionManager {
     completed: number;
     expired: number;
   }> {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('verification_sessions')
       .select('status');
