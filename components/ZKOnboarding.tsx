@@ -312,12 +312,13 @@ export function ZKOnboarding() {
                         </div>
 
                         {/* zkPDF Proof Hash Display */}
-                        <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                            <div className="text-sm font-medium text-purple-600 mb-2">🔐 zkPDF Proof Generated</div>
-                            <div className="text-xs font-mono bg-black/10 p-2 rounded border">
-                                Hash: {credentials.education_score > 0 ? 'edu_zkpdf_' : 'gh_zkpdf_'}{Math.random().toString(16).substring(2, 18)}...
+                        <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg space-y-2">
+                            <div className="text-sm font-medium text-purple-600">🔐 zkPDF Proof Generated</div>
+                            <div className="text-xs font-mono bg-black/10 p-2 rounded border break-all">
+                                <div className="text-gray-600">Hash:</div>
+                                <div className="mt-1">{credentials.education_score > 0 ? 'edu_zkpdf_' : 'gh_zkpdf_'}{Math.random().toString(16).substring(2, 18)}...</div>
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <div className="text-xs text-muted-foreground">
                                 Your credentials are verified via zkPDF circuits while preserving privacy
                             </div>
                         </div>
@@ -327,7 +328,7 @@ export function ZKOnboarding() {
                             <PixelButton
                                 variant="accent"
                                 onClick={() => {
-                                    alert('🔍 Self ZK Verify\n\nPhase 2 Feature:\n✓ Self-sovereign identity verification\n✓ Zero-knowledge proof of qualifications\n✓ Decentralized reputation validation\n\nComing soon in Phase 2!')
+                                    window.open('/self-verify', '_blank')
                                 }}
                                 className="text-sm"
                             >

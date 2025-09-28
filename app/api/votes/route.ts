@@ -122,19 +122,14 @@ export async function POST(request: Request) {
 
         // Demographic data already loaded in voter object
 
-        // Create vote with Level 3 enhanced data
+        // Create vote with basic data (matching table schema)
         const { error: voteError } = await supabase
             .from('votes')
             .insert({
                 voter_id: voter.id,
                 voted_for_id: votedFor.id,
                 vote_type: voteType,
-                feedback,
-                voter_verified: true, // All voters are verified at this point
-                verification_weight: votePower,
-                voter_nationality: voter.nationality,
-                voter_gender: voter.gender,
-                voter_age: voter.age
+                feedback
             })
 
         if (voteError) throw voteError

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
 import {
   SelfQRcodeWrapper,
   SelfAppBuilder,
@@ -16,12 +17,12 @@ import { Badge } from "@/components/ui/badge";
 
 export default function SelfVerifyPage() {
   const router = useRouter();
+  const { address, isConnected } = useAccount();
   const [linkCopied, setLinkCopied] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [universalLink, setUniversalLink] = useState("");
-  const [userId, setUserId] = useState(ethers.ZeroAddress);
   const [isLoading, setIsLoading] = useState(true);
 
   // For HackerRep, we want to allow India only
@@ -33,11 +34,13 @@ export default function SelfVerifyPage() {
   // Initialize Self App
   useEffect(() => {
     const initializeSelfApp = async () => {
+      if (!address || !isConnected) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
-        
-        // Get user's wallet address (you can integrate with your wallet connection)
-        const userWalletAddress = userId || ethers.ZeroAddress;
         
         const app = new SelfAppBuilder({
           version: 2,
@@ -45,11 +48,11 @@ export default function SelfVerifyPage() {
           scope: "hackerrep-verification",
           endpoint: `${process.env.NEXT_PUBLIC_SELF_ENDPOINT || 'http://localhost:3000'}/api/self/verify`,
           logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
-          userId: userWalletAddress,
+          userId: address,
           endpointType: "celo",
           userIdType: "hex",
           userDefinedData: JSON.stringify({
-            walletAddress: userWalletAddress,
+            walletAddress: address,
             timestamp: Date.now(),
             source: "hacker-rep",
             contractAddress: "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db"
@@ -71,18 +74,8 @@ export default function SelfVerifyPage() {
       }
     };
 
-    if (userId) {
-      initializeSelfApp();
-    }
-  }, [excludedCountries, userId]);
-
-  // Simulate wallet connection (replace with your actual wallet connection)
-  useEffect(() => {
-    // For demo purposes, use a sample wallet address
-    // In production, this would come from your wallet connection
-    const sampleWallet = "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7";
-    setUserId(sampleWallet);
-  }, []);
+    initializeSelfApp();
+  }, [excludedCountries, address, isConnected]);
 
   const displayToast = (message: string) => {
     setToastMessage(message);
@@ -124,7 +117,7 @@ export default function SelfVerifyPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          walletAddress: userId,
+          walletAddress: address,
           source: 'hacker-rep-self-verify',
           timestamp: Date.now(),
           contractAddress: "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
@@ -151,12 +144,33 @@ export default function SelfVerifyPage() {
     }
   };
 
+  if (!isConnected || !address) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">Wallet Not Connected</CardTitle>
+            <CardDescription className="text-center">
+              Please connect your wallet to proceed with Self Protocol verification.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={() => router.push('/')} className="w-full">
+              Go Back to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Initializing Self verification...</p>
+          <p className="text-sm text-gray-500 mt-2">Wallet: {address.substring(0, 6)}...{address.substring(address.length - 4)}</p>
         </div>
       </div>
     );

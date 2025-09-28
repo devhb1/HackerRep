@@ -3,111 +3,94 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
     try {
-        const { walletAddress, source, timestamp, contractAddress, chainId, demographics } = await request.json();
+        const body = await request.json();
+        
+        const {
+            walletAddress,
+            source,
+            timestamp,
+            contractAddress,
+            chainId,
+            demographics
+        } = body;
 
         if (!walletAddress) {
             return NextResponse.json({ 
-                error: 'Wallet address is required' 
+                error: 'Missing wallet address' 
             }, { status: 400 });
         }
 
-        // Check if user already exists in HackerRep
-        const { data: existingUser, error: userError } = await supabase
+        console.log('🔄 Syncing Self Protocol verification for:', walletAddress);
+
+        // Update user with Self Protocol verification data
+        const { data: user, error: userError } = await supabase
             .from('users')
-            .select('*')
+            .update({
+                self_verified: true,
+                nationality: demographics?.nationality || 'INDIA',
+                gender: demographics?.gender || 'MALE',
+                age: demographics?.age || 25,
+                updated_at: new Date().toISOString()
+            })
             .eq('wallet_address', walletAddress.toLowerCase())
+            .select()
             .single();
 
-        if (userError && userError.code !== 'PGRST116') {
-            console.error('Error checking existing user:', userError);
+        if (userError) {
+            console.error('Error updating user:', userError);
             return NextResponse.json({ 
-                error: 'Database error' 
+                error: 'Failed to update user verification status' 
             }, { status: 500 });
         }
 
-        // Create user if doesn't exist
-        if (!existingUser) {
-            const { data: newUser, error: createError } = await supabase
-                .from('users')
-                .insert({
-                    wallet_address: walletAddress.toLowerCase(),
-                    display_name: `User ${walletAddress.substring(0, 6)}...${walletAddress.substring(38)}`,
-                    reputation_score: 100, // Base reputation for new users
-                    self_verified: true,
-                    verification_level: 2,
-                    voting_eligible: demographics?.nationality === 'INDIA',
-                    nationality: demographics?.nationality,
-                    gender: demographics?.gender,
-                    age: demographics?.age
-                })
-                .select()
-                .single();
+        // Store verification session
+        const { data: session, error: sessionError } = await supabase
+            .from('verification_sessions')
+            .insert({
+                wallet_address: walletAddress.toLowerCase(),
+                verification_type: 'self_protocol',
+                status: 'verified',
+                verification_data: {
+                    source,
+                    timestamp,
+                    contractAddress,
+                    chainId,
+                    demographics
+                },
+                completed_at: new Date().toISOString()
+            })
+            .select()
+            .single();
 
-            if (createError) {
-                console.error('Error creating user:', createError);
-                return NextResponse.json({ 
-                    error: 'Failed to create user' 
-                }, { status: 500 });
-            }
-
-            console.log('✅ Created new user with Self verification data:', newUser.id);
-        } else {
-            // Update existing user with Self verification fields
-            const { error: updateError } = await supabase
-                .from('users')
-                .update({
-                    nationality: demographics?.nationality,
-                    gender: demographics?.gender,
-                    age: demographics?.age,
-                    self_verified: true,
-                    verification_level: 2,
-                    voting_eligible: demographics?.nationality === 'INDIA',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('wallet_address', walletAddress.toLowerCase());
-
-            if (updateError) {
-                console.error('Error updating user:', updateError);
-                return NextResponse.json({ 
-                    error: 'Failed to update user' 
-                }, { status: 500 });
-            }
-
-            console.log('✅ Updated user with Self verification data:', {
-                nationality: demographics?.nationality,
-                gender: demographics?.gender,
-                age: demographics?.age
-            });
+        if (sessionError) {
+            console.error('Error storing verification session:', sessionError);
+            // Don't fail the request if session storage fails
         }
 
-        // Create activity entry
-        const userId = existingUser?.id || (await supabase
-            .from('users')
-            .select('id')
-            .eq('wallet_address', walletAddress.toLowerCase())
-            .single()).data?.id;
+        console.log('✅ Self Protocol verification synced successfully');
 
-        if (userId) {
-            await supabase
-                .from('activities')
-                .insert({
-                    user_id: userId,
-                    activity_type: 'self_verification',
-                    description: `Identity verified with Self Protocol from ${source}`
-                });
-        }
-
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
-            message: 'Verification synced successfully',
-            walletAddress: walletAddress.toLowerCase(),
-            verified: true
+            message: 'Self Protocol verification synced successfully',
+            user: {
+                wallet_address: user.wallet_address,
+                self_verified: user.self_verified,
+                nationality: user.nationality,
+                gender: user.gender,
+                age: user.age
+            },
+            verification: {
+                type: 'self_protocol',
+                status: 'verified',
+                timestamp: new Date().toISOString()
+            }
         });
 
     } catch (error) {
-        console.error('Sync verification error:', error);
-        return NextResponse.json({ 
-            error: 'Internal server error' 
+        console.error('Self Protocol sync error:', error);
+        return NextResponse.json({
+            error: 'Failed to sync Self Protocol verification',
+            details: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 });
     }
 }
