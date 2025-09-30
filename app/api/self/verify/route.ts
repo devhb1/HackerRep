@@ -214,7 +214,16 @@ export async function POST(request: NextRequest) {
 
             if (userError) {
                 logger.error('Error managing user demographics', { error: userError, walletAddress: walletAddr }, 'VERIFICATION');
-                // Don't fail the verification for this error, but log it
+                // This is actually critical - we should return an error if user update fails
+                return NextResponse.json({
+                    status: "error",
+                    result: false,
+                    reason: "Verification succeeded but failed to update user record",
+                    error_code: "USER_UPDATE_FAILED",
+                    details: userError.message,
+                    // Still return success for Self Protocol, but indicate the sync issue
+                    verification_status: "verified_but_sync_failed"
+                }, { status: 200 });
             }
 
             logger.info('Self verification successful', {
