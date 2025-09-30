@@ -31,13 +31,13 @@ export async function GET() {
         }
 
         // Get voting statistics for each user
-        const walletAddresses = (level3Users || []).map(user => user.wallet_address)
-        
+        const walletAddresses = (level3Users || []).map((user: any) => user.wallet_address)
+
         // Get votes received by each user
         const { data: votesReceived } = await supabase
             .from('votes')
             .select('voted_for_id, vote_type, verification_weight')
-            .in('voted_for_id', (level3Users || []).map(user => user.id))
+            .in('voted_for_id', (level3Users || []).map((user: any) => user.id))
 
         // Get user IDs mapping
         const { data: userIds } = await supabase
@@ -46,22 +46,22 @@ export async function GET() {
             .in('wallet_address', walletAddresses)
 
         const userIdMap = new Map(
-            (userIds || []).map(user => [user.wallet_address, user.id])
+            (userIds || []).map((user: any) => [user.wallet_address, user.id])
         )
 
         // Calculate voting statistics
         const votingStats = new Map()
-        
+
         for (const user of level3Users || []) {
             const userId = userIdMap.get(user.wallet_address)
-            const userVotes = (votesReceived || []).filter(vote => vote.voted_for_id === userId)
-            
-            const upvotes = userVotes.filter(vote => vote.vote_type === 'upvote')
-            const downvotes = userVotes.filter(vote => vote.vote_type === 'downvote')
-            
-            const totalUpvoteWeight = upvotes.reduce((sum, vote) => sum + (vote.verification_weight || 10), 0)
-            const totalDownvoteWeight = downvotes.reduce((sum, vote) => sum + (vote.verification_weight || 10), 0)
-            
+            const userVotes = (votesReceived || []).filter((vote: any) => vote.voted_for_id === userId)
+
+            const upvotes = userVotes.filter((vote: any) => vote.vote_type === 'upvote')
+            const downvotes = userVotes.filter((vote: any) => vote.vote_type === 'downvote')
+
+            const totalUpvoteWeight = upvotes.reduce((sum: number, vote: any) => sum + (vote.verification_weight || 10), 0)
+            const totalDownvoteWeight = downvotes.reduce((sum: number, vote: any) => sum + (vote.verification_weight || 10), 0)
+
             votingStats.set(user.wallet_address, {
                 total_upvotes: upvotes.length,
                 total_downvotes: downvotes.length,
@@ -72,7 +72,7 @@ export async function GET() {
         }
 
         // Format the Level 3 leaderboard
-        const leaderboard = (level3Users || []).map((user, index) => {
+        const leaderboard = (level3Users || []).map((user: any, index: number) => {
             const stats = votingStats.get(user.wallet_address) || {
                 total_upvotes: 0,
                 total_downvotes: 0,
@@ -91,29 +91,29 @@ export async function GET() {
                 display_name: finalDisplayName,
                 ens_name: user.ens_name,
                 avatar_url: user.avatar_url,
-                
+
                 // Level 3 Reputation System
                 reputation_score: user.reputation_score || 100, // Current reputation
                 base_reputation: 100, // Starting reputation
                 reputation_change: (user.reputation_score || 100) - 100,
-                
+
                 // Demographic Data (Self Protocol verified)
                 age: user.age,
                 gender: user.gender,
                 nationality: user.nationality,
-                
+
                 // Voting Statistics
                 total_upvotes: stats.total_upvotes,
                 total_downvotes: stats.total_downvotes,
                 upvote_weight: stats.upvote_weight,
                 downvote_weight: stats.downvote_weight,
                 net_voting_impact: stats.net_voting_impact,
-                
+
                 // Level 3 Status
                 self_verified: user.self_verified,
                 voting_eligible: user.nationality === 'INDIA',
                 level: 'Level 3: Self Protocol Verified + Voting Enabled',
-                
+
                 created_at: user.created_at,
                 updated_at: user.updated_at
             }

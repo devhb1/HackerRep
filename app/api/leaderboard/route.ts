@@ -31,7 +31,7 @@ export async function GET() {
         }
 
         // Get user profile data for ENS names and display names
-        const walletAddresses = (zkUsers || []).map(user => user.wallet_address)
+        const walletAddresses = (zkUsers || []).map((user: any) => user.wallet_address)
         const { data: userProfiles } = await supabase
             .from('users')
             .select('wallet_address, ens_name, display_name, avatar_url, seniority_index')
@@ -39,12 +39,12 @@ export async function GET() {
 
         // Create a map for quick lookup
         const userProfileMap = new Map(
-            (userProfiles || []).map(profile => [profile.wallet_address, profile])
+            (userProfiles || []).map((profile: any) => [profile.wallet_address, profile])
         )
 
         // Format the leaderboard with zkPDF-specific data and ENS integration
-        const leaderboard = (zkUsers || []).map((user, index) => {
-            const userProfile = userProfileMap.get(user.wallet_address)
+        const leaderboard = (zkUsers || []).map((user: any, index: number) => {
+            const userProfile: any = userProfileMap.get(user.wallet_address)
             // Prioritize ENS name, fallback to display name, then wallet address
             const ensName = userProfile?.ens_name
             const displayName = userProfile?.display_name

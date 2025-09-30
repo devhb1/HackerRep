@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         }
 
         // Get the other user IDs from the connections
-        const connectedUserIds = connections.map(conn =>
+        const connectedUserIds = connections.map((conn: any) =>
             conn.requester_id === currentUser.id ? conn.target_id : conn.requester_id
         )
 

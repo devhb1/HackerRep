@@ -76,10 +76,12 @@ export function ZKOnboarding() {
     const [loading, setLoading] = useState(true)
     const [currentStep, setCurrentStep] = useState<string | null>(null)
     const [generatingReputation, setGeneratingReputation] = useState(false)
+    const [selfVerification, setSelfVerification] = useState<{ isVerified: boolean, votingEligible: boolean } | null>(null)
 
     useEffect(() => {
         if (isConnected && address) {
             fetchCredentials()
+            fetchSelfVerificationStatus()
         }
     }, [address, isConnected])
 
@@ -91,6 +93,17 @@ export function ZKOnboarding() {
             console.log('🔄 GitHub connection detected, refreshing credentials...')
             fetchCredentials()
         }
+    }, [isConnected, address])
+
+    // Periodically refresh Self verification status
+    useEffect(() => {
+        if (!isConnected || !address) return
+
+        const interval = setInterval(() => {
+            fetchSelfVerificationStatus()
+        }, 30000) // Check every 30 seconds
+
+        return () => clearInterval(interval)
     }, [isConnected, address])
 
     const fetchCredentials = async () => {
@@ -143,6 +156,25 @@ export function ZKOnboarding() {
             console.error('Failed to fetch ZK credentials:', error)
         }
         setLoading(false)
+    }
+
+    const fetchSelfVerificationStatus = async () => {
+        if (!address) return
+
+        try {
+            const response = await fetch(`/api/self/verification-status?walletAddress=${address}`)
+            if (response.ok) {
+                const data = await response.json()
+                if (data.success) {
+                    setSelfVerification({
+                        isVerified: data.data.isVerified,
+                        votingEligible: data.data.votingEligible
+                    })
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch Self verification status:', error)
+        }
     }
 
     const generateZKProofReputation = async () => {
@@ -308,11 +340,11 @@ export function ZKOnboarding() {
                         />
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground mt-3">
-                        <span className="text-center font-medium">Newcomer<br/><span className="text-gray-500">(0)</span></span>
-                        <span className="text-center font-medium">Student<br/><span className="text-gray-500">(100)</span></span>
-                        <span className="text-center font-medium">Developer<br/><span className="text-gray-500">(200)</span></span>
-                        <span className="text-center font-medium">Senior<br/><span className="text-gray-500">(300)</span></span>
-                        <span className="text-center font-medium">Expert<br/><span className="text-gray-500">(400)</span></span>
+                        <span className="text-center font-medium">Newcomer<br /><span className="text-gray-500">(0)</span></span>
+                        <span className="text-center font-medium">Student<br /><span className="text-gray-500">(100)</span></span>
+                        <span className="text-center font-medium">Developer<br /><span className="text-gray-500">(200)</span></span>
+                        <span className="text-center font-medium">Senior<br /><span className="text-gray-500">(300)</span></span>
+                        <span className="text-center font-medium">Expert<br /><span className="text-gray-500">(400)</span></span>
                     </div>
                 </div>
 
@@ -340,29 +372,62 @@ export function ZKOnboarding() {
 
                         {/* Phase 2 Features - Self ZK Verify & Vote */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <PixelButton
-                                variant="accent"
-                                onClick={() => {
-                                    window.open('/self-verify', '_blank')
-                                }}
-                                className="text-sm"
-                            >
-                                🔍 Self ZK Verify
-                            </PixelButton>
+                            {selfVerification?.isVerified ? (
+                                <PixelButton
+                                    variant="muted"
+                                    onClick={() => {
+                                        window.open('/self-verify', '_blank')
+                                    }}
+                                    className="text-sm"
+                                >
+                                    ✅ Self Verified
+                                </PixelButton>
+                            ) : (
+                                <PixelButton
+                                    variant="accent"
+                                    onClick={() => {
+                                        window.open('/self-verify', '_blank')
+                                    }}
+                                    className="text-sm"
+                                >
+                                    🔍 Self ZK Verify
+                                </PixelButton>
+                            )}
 
-                            <PixelButton
-                                variant="muted"
-                                onClick={() => {
-                                    alert('🗳️ Vote on Others\n\nPhase 2 Feature:\n✓ Vote on peer qualifications\n✓ Build social reputation layer\n✓ Contribute to community trust\n\nComing soon in Phase 2!')
-                                }}
-                                className="text-sm"
-                            >
-                                🗳️ Vote
-                            </PixelButton>
+                            {selfVerification?.votingEligible ? (
+                                <PixelButton
+                                    variant="accent"
+                                    onClick={() => {
+                                        window.open('/vote', '_blank')
+                                    }}
+                                    className="text-sm"
+                                >
+                                    🗳️ Vote (2x Power)
+                                </PixelButton>
+                            ) : (
+                                <PixelButton
+                                    variant="muted"
+                                    onClick={() => {
+                                        alert('🗳️ Vote Locked\n\n' +
+                                            (selfVerification?.isVerified
+                                                ? 'Self Protocol verification complete, but voting eligibility pending. Please refresh the page.'
+                                                : 'Complete Self Protocol verification first to unlock voting with 2x power!'))
+                                    }}
+                                    className="text-sm"
+                                >
+                                    � Vote Locked
+                                </PixelButton>
+                            )}
                         </div>
 
                         <div className="text-xs text-center text-muted-foreground">
-                            🏆 Phase 2: Self Protocol Integration & Social Reputation Layer
+                            {selfVerification?.votingEligible ? (
+                                <span className="text-green-600">🎉 Verified & Voting Eligible (2x Power)</span>
+                            ) : selfVerification?.isVerified ? (
+                                <span className="text-yellow-600">✅ Self Verified • Voting Eligibility Pending</span>
+                            ) : (
+                                <span>🏆 Phase 2: Self Protocol Integration & Social Reputation Layer</span>
+                            )}
                         </div>
                     </div>
                 ) : canGenerateProofs ? (
@@ -837,10 +902,10 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    walletAddress: address,
+                    walletAddress: walletAddress,
                     action: 'generate_academic_proof',
                     data: {
-                        degreeType: degreeType,
+                        degreeType: selectedDegree,
                         institution: institution
                     }
                 }),

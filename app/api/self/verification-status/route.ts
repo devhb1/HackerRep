@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         verifiedAt: verification.verified_at,
         txHash: verification.tx_hash
       } : null,
-      activeSessions: activeSessions?.map(session => ({
+      activeSessions: activeSessions?.map((session: any) => ({
         sessionId: session.session_id,
         status: session.status,
         createdAt: session.created_at,
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error checking verification status:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Failed to check verification status',
         details: error instanceof Error ? error.message : 'Unknown error'

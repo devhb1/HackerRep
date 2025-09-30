@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // Check for existing active sessions
     const existingSessions = await sessionManager.getActiveSessionsForWallet(walletAddress);
-    
+
     if (existingSessions.length > 0) {
       // Cancel existing sessions
       for (const session of existingSessions) {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating verification session:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Failed to create verification session',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -63,10 +63,13 @@ export async function GET(request: NextRequest) {
     const walletAddress = searchParams.get('walletAddress');
     const sessionId = searchParams.get('sessionId');
 
+    // Dynamic import to avoid build-time execution
+    const { sessionManager } = await import('@/lib/session-manager');
+
     if (sessionId) {
       // Get specific session
       const session = await sessionManager.getSession(sessionId);
-      
+
       if (!session) {
         return NextResponse.json(
           { error: 'Session not found' },
@@ -90,7 +93,7 @@ export async function GET(request: NextRequest) {
     if (walletAddress) {
       // Get active sessions for wallet
       const sessions = await sessionManager.getActiveSessionsForWallet(walletAddress);
-      
+
       return NextResponse.json({
         success: true,
         sessions: sessions.map(session => ({
@@ -103,7 +106,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get session statistics
+    // Get session statistics  
     const stats = await sessionManager.getSessionStats();
 
     return NextResponse.json({
@@ -114,7 +117,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error getting session data:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Failed to get session data',
         details: error instanceof Error ? error.message : 'Unknown error'

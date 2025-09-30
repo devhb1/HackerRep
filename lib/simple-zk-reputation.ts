@@ -32,12 +32,12 @@ export async function generateSimpleGitHubZKProof(
         languages: string[]
     }
 ): Promise<SimpleZKProof> {
-    
+
     console.log(`🐙 Generating simple GitHub ZK proof for ${githubUsername}`)
-    
+
     // Calculate score
     let score = 25 // Base score
-    
+
     if (githubStats.totalCommits >= 100) {
         score += 75
     } else if (githubStats.totalCommits >= 20) {
@@ -45,23 +45,23 @@ export async function generateSimpleGitHubZKProof(
     } else if (githubStats.totalCommits >= 5) {
         score += 25
     }
-    
+
     score += Math.min(githubStats.publicRepos * 3, 50)
     score += Math.min(githubStats.languages.length * 5, 25)
     score = Math.min(score, 200)
-    
+
     // Generate ZK proof components
     const proofId = `github_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
     const randomness = crypto.randomBytes(16).toString('hex')
-    
+
     const commitment = crypto.createHash('sha256')
         .update(`${githubUsername}_${githubStats.totalCommits}_${randomness}`)
         .digest('hex')
-    
+
     const nullifier = crypto.createHash('sha256')
         .update(`${walletAddress}_github_${githubUsername}`)
         .digest('hex')
-    
+
     const proof: SimpleZKProof = {
         proofId,
         walletAddress: walletAddress.toLowerCase(),
@@ -72,10 +72,10 @@ export async function generateSimpleGitHubZKProof(
         verified: true,
         createdAt: new Date().toISOString()
     }
-    
+
     // Store in database
     await storeSimpleZKProof(proof, githubStats, githubUsername)
-    
+
     console.log(`✅ GitHub ZK proof generated: ${score} points`)
     return proof
 }
@@ -88,9 +88,9 @@ export async function generateSimpleAcademicZKProof(
     degreeType: 'highschool' | 'bachelors' | 'masters' | 'phd' | 'certification',
     institution: string
 ): Promise<SimpleZKProof> {
-    
+
     console.log(`🎓 Generating simple academic ZK proof for ${degreeType}`)
-    
+
     // Calculate score
     const scoreMap = {
         'highschool': 50,
@@ -100,19 +100,19 @@ export async function generateSimpleAcademicZKProof(
         'certification': 75
     }
     const score = scoreMap[degreeType]
-    
+
     // Generate ZK proof components
     const proofId = `academic_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
     const randomness = crypto.randomBytes(16).toString('hex')
-    
+
     const commitment = crypto.createHash('sha256')
         .update(`${institution}_${degreeType}_${randomness}`)
         .digest('hex')
-    
+
     const nullifier = crypto.createHash('sha256')
         .update(`${walletAddress}_academic_${institution}`)
         .digest('hex')
-    
+
     const proof: SimpleZKProof = {
         proofId,
         walletAddress: walletAddress.toLowerCase(),
@@ -123,10 +123,10 @@ export async function generateSimpleAcademicZKProof(
         verified: true,
         createdAt: new Date().toISOString()
     }
-    
+
     // Store in database
     await storeSimpleZKProof(proof, { degreeType, institution })
-    
+
     console.log(`✅ Academic ZK proof generated: ${score} points`)
     return proof
 }
@@ -162,14 +162,14 @@ async function storeSimpleZKProof(
             }, {
                 onConflict: 'wallet_address'
             })
-        
+
         if (!zkError) {
             console.log('✅ Stored in zk_credentials table')
             return
         }
-        
+
         console.log('⚠️ zk_credentials table not available, using users table fallback')
-        
+
         // Fallback: Update users table directly
         const { error: userError } = await supabase
             .from('users')
@@ -181,14 +181,14 @@ async function storeSimpleZKProof(
             }, {
                 onConflict: 'wallet_address'
             })
-        
+
         if (userError) {
             console.error('❌ Failed to store ZK proof:', userError)
             throw new Error(`Storage failed: ${userError.message}`)
         }
-        
+
         console.log('✅ Stored in users table (fallback)')
-        
+
     } catch (error) {
         console.error('❌ Storage error:', error)
         throw error
@@ -211,7 +211,7 @@ export async function getSimpleReputation(walletAddress: string): Promise<{
             .select('education_score, github_score, total_base_score, reputation_tier')
             .eq('wallet_address', walletAddress.toLowerCase())
             .single()
-        
+
         if (zkData) {
             return {
                 githubScore: zkData.github_score || 0,
@@ -223,16 +223,16 @@ export async function getSimpleReputation(walletAddress: string): Promise<{
     } catch (error) {
         console.log('zk_credentials not available, using users table')
     }
-    
+
     // Fallback to users table
     const { data: userData } = await supabase
         .from('users')
         .select('reputation_score')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single()
-    
+
     const score = userData?.reputation_score || 0
-    
+
     return {
         githubScore: score > 100 ? score - 100 : 0, // Assume excess over 100 is from GitHub
         academicScore: 0,
@@ -253,7 +253,7 @@ export async function testLevel1ZKGeneration(walletAddress: string): Promise<{
 }> {
     try {
         console.log('🧪 Testing Level 1 ZK generation...')
-        
+
         // Test GitHub proof with realistic data
         const githubProof = await generateSimpleGitHubZKProof(
             walletAddress,
@@ -264,19 +264,19 @@ export async function testLevel1ZKGeneration(walletAddress: string): Promise<{
                 languages: ['TypeScript', 'JavaScript', 'Python', 'Rust', 'Go'].slice(0, Math.floor(Math.random() * 3) + 2)
             }
         )
-        
+
         // Test Academic proof with realistic data
         const degreeTypes = ['highschool', 'bachelors', 'masters', 'phd', 'certification']
         const institutions = ['MIT', 'Stanford University', 'IIT Delhi', 'University of California', 'Oxford University', 'Harvard University']
-        
+
         const academicProof = await generateSimpleAcademicZKProof(
             walletAddress,
-            degreeTypes[Math.floor(Math.random() * degreeTypes.length)],
+            degreeTypes[Math.floor(Math.random() * degreeTypes.length)] as 'highschool' | 'bachelors' | 'masters' | 'phd' | 'certification',
             institutions[Math.floor(Math.random() * institutions.length)]
         )
-        
+
         const totalScore = githubProof.score + academicProof.score
-        
+
         return {
             success: true,
             githubProof,
@@ -284,7 +284,7 @@ export async function testLevel1ZKGeneration(walletAddress: string): Promise<{
             totalScore,
             message: `🚀 Level 1 ZK proofs working! Total: ${totalScore} points`
         }
-        
+
     } catch (error) {
         return {
             success: false,
