@@ -43,6 +43,13 @@ export function VerificationStatus() {
   useEffect(() => {
     if (address) {
       fetchVerificationStatus();
+
+      // Set up periodic refresh to catch verification updates
+      const interval = setInterval(() => {
+        fetchVerificationStatus();
+      }, 10000); // Refresh every 10 seconds
+
+      return () => clearInterval(interval);
     }
   }, [address]);
 
@@ -214,7 +221,7 @@ export function VerificationStatus() {
           )}
 
           {/* Action Button */}
-          <div className="pt-4">
+          <div className="pt-4 space-y-2">
             {!verificationData?.isVerified ? (
               <Button onClick={handleStartVerification} className="w-full">
                 Start Self Verification
@@ -224,6 +231,9 @@ export function VerificationStatus() {
                 Re-verify Identity
               </Button>
             )}
+            <Button onClick={fetchVerificationStatus} variant="ghost" size="sm" className="w-full">
+              🔄 Refresh Status
+            </Button>
           </div>
 
           {/* Benefits */}

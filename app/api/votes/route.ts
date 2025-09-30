@@ -12,7 +12,7 @@ function calculateVotingPower(
 ): { power: number, breakdown: string } {
     let basePower = 10 // Base voting power
     let breakdown = `Base: ${basePower}`
-    
+
     // Rule 1: Age difference > 5 years
     const ageDiff = Math.abs(voterAge - votedForAge)
     if (ageDiff > 5) {
@@ -24,7 +24,7 @@ function calculateVotingPower(
             breakdown = `Age disadvantage (${voterAge} < ${votedForAge}): 7`
         }
     }
-    
+
     // Rule 2: Reputation difference > 50 points (overrides age if both apply)
     const repDiff = Math.abs(voterReputation - votedForReputation)
     if (repDiff > 50) {
@@ -36,17 +36,17 @@ function calculateVotingPower(
             breakdown = `Reputation disadvantage (${voterReputation} < ${votedForReputation}): 7`
         }
     }
-    
+
     // Rule 3: Cross-gender voting bonus (2x multiplier)
     let finalPower = basePower
-    if (voterGender && votedForGender && 
-        voterGender !== votedForGender && 
+    if (voterGender && votedForGender &&
+        voterGender !== votedForGender &&
         (voterGender === 'MALE' || voterGender === 'FEMALE') &&
         (votedForGender === 'MALE' || votedForGender === 'FEMALE')) {
         finalPower = basePower * 2
         breakdown += ` → Cross-gender bonus (${voterGender}→${votedForGender}): ${finalPower}`
     }
-    
+
     return { power: finalPower, breakdown }
 }
 
@@ -73,18 +73,29 @@ export async function POST(request: Request) {
         }
 
         // LEVEL 3: Enhanced eligibility check - ONLY Self verified Indian users can vote
-        const canVote = voter?.self_verified === true && 
-                       voter?.nationality === 'INDIA' &&
-                       voter?.voting_eligible === true
-        
+        const canVote = voter?.self_verified === true &&
+            voter?.nationality === 'INDIA' &&
+            voter?.voting_eligible === true
+
         if (!canVote) {
-            return NextResponse.json({ 
-                error: 'Voting not allowed. Only Self Protocol verified users with Indian nationality can vote. Please complete Self verification first.',
+            let errorMessage = 'Voting not allowed. ';
+
+            if (!voter?.self_verified) {
+                errorMessage += 'Please complete Self Protocol verification first.';
+            } else if (voter?.nationality !== 'INDIA') {
+                errorMessage += 'Only users with Indian nationality can vote.';
+            } else if (!voter?.voting_eligible) {
+                errorMessage += 'Your voting eligibility is pending. Please wait a few moments and try again.';
+            }
+
+            return NextResponse.json({
+                error: errorMessage,
                 requirements: {
-                    selfVerified: voter?.self_verified,
-                    nationality: voter?.nationality,
-                    votingEligible: voter?.voting_eligible
-                }
+                    selfVerified: voter?.self_verified || false,
+                    nationality: voter?.nationality || null,
+                    votingEligible: voter?.voting_eligible || false
+                },
+                nextSteps: !voter?.self_verified ? 'Visit /self-verify to complete verification' : 'Wait for verification to be processed'
             }, { status: 400 })
         }
 
@@ -115,7 +126,7 @@ export async function POST(request: Request) {
             votedFor.reputation_score || 0,
             votedForGender
         )
-        
+
         const votePower = votingPowerResult.power
         const repChange = (voteType === 'upvote' ? 1 : -1) * votePower
 
@@ -145,7 +156,7 @@ export async function POST(request: Request) {
 
         if (repError) throw repError
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             votePower,
             repChange,

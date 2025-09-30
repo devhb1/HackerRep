@@ -1,6 +1,7 @@
 // Polling-based Contract Event Listener for HackerRep Self Verification
 import { ethers } from 'ethers';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { logger } from './logger';
 
 const CONTRACT_ADDRESS = '0xF54C11EbC39905dd88496E098CDEeC565F79a696'; // VERIFIED CONTRACT ON CELOSCAN
 const CELO_RPC_URL = 'https://forno.celo.org';
@@ -15,7 +16,7 @@ const CONTRACT_ABI = [
 export class ContractPollingListener {
   private provider: ethers.Provider;
   private contract: ethers.Contract;
-  private supabase: any;
+  private supabase: SupabaseClient | null = null;
   private pollingInterval: NodeJS.Timeout | null = null;
   private lastProcessedBlock: number = 0;
   private isRunning: boolean = false;
@@ -23,7 +24,7 @@ export class ContractPollingListener {
   constructor() {
     this.provider = new ethers.JsonRpcProvider(CELO_RPC_URL);
     this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.provider);
-    
+
     // Initialize Supabase client - only if environment variables are available
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       this.supabase = createClient(
@@ -35,34 +36,35 @@ export class ContractPollingListener {
 
   async startPolling() {
     if (this.isRunning) {
-      console.log('🔄 Polling listener already running');
+      logger.info('Polling listener already running', null, 'CONTRACT');
       return;
     }
 
     if (!this.supabase) {
-      console.log('⚠️ Supabase client not initialized - environment variables missing');
+      logger.warn('Supabase client not initialized - environment variables missing', null, 'CONTRACT');
       return;
     }
 
-    console.log('🔍 Starting contract polling listener for HackerRep...');
-    console.log('📋 Contract Address:', CONTRACT_ADDRESS);
-    console.log('🌐 Network: Celo Mainnet');
+    logger.info('Starting contract polling listener for HackerRep', {
+      contractAddress: CONTRACT_ADDRESS,
+      network: 'Celo Mainnet'
+    }, 'CONTRACT');
 
     try {
       // Get current block number
       this.lastProcessedBlock = await this.provider.getBlockNumber();
-      console.log('📊 Starting from block:', this.lastProcessedBlock);
+      logger.info('Contract listener starting from block', { startBlock: this.lastProcessedBlock }, 'CONTRACT');
 
       this.isRunning = true;
-      
+
       // Start polling every 30 seconds
       this.pollingInterval = setInterval(async () => {
         await this.pollForEvents();
       }, 30000);
 
-      console.log('🎧 Contract polling listener started successfully!');
+      logger.info('Contract polling listener started successfully', null, 'CONTRACT');
     } catch (error) {
-      console.error('Failed to start polling listener:', error);
+      logger.error('Failed to start polling listener', { error: error instanceof Error ? error.message : error }, 'CONTRACT');
       throw error;
     }
   }
@@ -72,7 +74,7 @@ export class ContractPollingListener {
 
     try {
       const currentBlock = await this.provider.getBlockNumber();
-      
+
       if (currentBlock <= this.lastProcessedBlock) {
         return; // No new blocks
       }
@@ -98,18 +100,21 @@ export class ContractPollingListener {
       // Process UserVerified events
       for (const event of userVerifiedEvents) {
         try {
-          const [user, nationality, gender, age, timestamp] = event.args as any;
-          console.log('✅ UserVerified event found:', {
-            user,
-            nationality,
-            gender,
-            age,
-            timestamp: new Date(Number(timestamp) * 1000),
-            txHash: event.transactionHash,
-            blockNumber: event.blockNumber
-          });
+          // Type guard to ensure event has args property
+          if ('args' in event && event.args) {
+            const [user, nationality, gender, age, timestamp] = event.args as any;
+            console.log('✅ UserVerified event found:', {
+              user,
+              nationality,
+              gender,
+              age,
+              timestamp: new Date(Number(timestamp) * 1000),
+              txHash: event.transactionHash,
+              blockNumber: event.blockNumber
+            });
 
-          await this.handleUserVerified(user, nationality, gender, age, timestamp, event.transactionHash);
+            await this.handleUserVerified(user, nationality, gender, age, timestamp, event.transactionHash);
+          }
         } catch (error) {
           console.error('Error processing UserVerified event:', error);
         }
@@ -118,15 +123,18 @@ export class ContractPollingListener {
       // Process VerificationRevoked events
       for (const event of verificationRevokedEvents) {
         try {
-          const [user, timestamp] = event.args as any;
-          console.log('❌ VerificationRevoked event found:', {
-            user,
-            timestamp: new Date(Number(timestamp) * 1000),
-            txHash: event.transactionHash,
-            blockNumber: event.blockNumber
-          });
+          // Type guard to ensure event has args property
+          if ('args' in event && event.args) {
+            const [user, timestamp] = event.args as any;
+            console.log('❌ VerificationRevoked event found:', {
+              user,
+              timestamp: new Date(Number(timestamp) * 1000),
+              txHash: event.transactionHash,
+              blockNumber: event.blockNumber
+            });
 
-          await this.handleVerificationRevoked(user, timestamp, event.transactionHash);
+            await this.handleVerificationRevoked(user, timestamp, event.transactionHash);
+          }
         } catch (error) {
           console.error('Error processing VerificationRevoked event:', error);
         }
@@ -152,9 +160,14 @@ export class ContractPollingListener {
     timestamp: bigint,
     txHash: string
   ) {
+    if (!this.supabase) {
+      logger.error('Supabase client not available for handling UserVerified event', { userAddress }, 'CONTRACT');
+      return;
+    }
+
     try {
-      console.log('🔄 Processing UserVerified event for:', userAddress);
-      
+      logger.info('Processing UserVerified event', { userAddress, nationality, gender }, 'CONTRACT');
+
       // Check if user exists in database
       const { data: existingUser, error: fetchError } = await this.supabase
         .from('users')
@@ -289,9 +302,14 @@ export class ContractPollingListener {
     timestamp: bigint,
     txHash: string
   ) {
+    if (!this.supabase) {
+      logger.error('Supabase client not available for handling VerificationRevoked event', { userAddress }, 'CONTRACT');
+      return;
+    }
+
     try {
-      console.log('🔄 Processing VerificationRevoked event for:', userAddress);
-      
+      logger.info('Processing VerificationRevoked event', { userAddress }, 'CONTRACT');
+
       // Update user verification status
       const { error: updateError } = await this.supabase
         .from('users')
@@ -350,14 +368,14 @@ export class ContractPollingListener {
   }
 }
 
-// Factory function to create listener instance
-let listenerInstance: ContractPollingListener | null = null;
+// Global instance to maintain state across API calls
+let globalListenerInstance: ContractPollingListener | null = null;
 
 export function getContractPollingListener(): ContractPollingListener {
-  if (!listenerInstance) {
-    listenerInstance = new ContractPollingListener();
+  if (!globalListenerInstance) {
+    globalListenerInstance = new ContractPollingListener();
   }
-  return listenerInstance;
+  return globalListenerInstance;
 }
 
 // For backward compatibility

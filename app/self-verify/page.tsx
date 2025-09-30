@@ -13,6 +13,7 @@ import { ethers } from "ethers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { logger } from "@/lib/logger";
 
 // Force dynamic rendering to prevent SSR issues
 export const dynamic = 'force-dynamic';
@@ -68,8 +69,7 @@ export default function SelfVerifyPage() {
       }
       try {
         setIsLoading(true);
-        console.log("Starting Self App initialization...");
-        console.log("Wallet address:", walletAddress);
+        logger.info("Starting Self App initialization...", { walletAddress }, "VERIFICATION");
 
         // Create a robust Self App configuration with better error handling
         // Use production URL to avoid Vercel deployment protection on preview branches
@@ -78,21 +78,24 @@ export default function SelfVerifyPage() {
         // Self Protocol expects the endpoint without /api prefix
         const endpoint = `${baseUrl}/api/self/verify`;
 
-        console.log("Using Self endpoint:", endpoint);
-        console.log("Wallet address:", walletAddress);
-        console.log("Base URL:", baseUrl);
-        console.log("Endpoint type: https (Celo mainnet)");
+        logger.info("Self App configuration", {
+          endpoint,
+          walletAddress,
+          baseUrl,
+          endpointType: "https (Celo mainnet)"
+        }, "VERIFICATION");
 
         // Validate endpoint URL
         try {
           new URL(endpoint);
-          console.log("✅ Endpoint URL is valid");
+          logger.info("Endpoint URL validated successfully", { endpoint }, "VERIFICATION");
         } catch (urlError) {
-          console.error("❌ Invalid endpoint URL:", urlError);
-          throw new Error(`Invalid endpoint URL: ${endpoint}`);
+          const errorMessage = `Invalid endpoint URL: ${endpoint}`;
+          logger.error("Invalid endpoint URL", { endpoint, error: urlError }, "VERIFICATION");
+          throw new Error(errorMessage);
         }
 
-        console.log("Creating SelfAppBuilder with config:", {
+        const config = {
           version: 2,
           appName: "HackerRep",
           scope: "hacker-rep-verification",
@@ -100,7 +103,9 @@ export default function SelfVerifyPage() {
           userId: walletAddress,
           endpointType: "https",
           userIdType: "hex"
-        });
+        };
+
+        logger.info("Creating SelfAppBuilder", { config }, "VERIFICATION");
 
         const app = new SelfAppBuilder({
           version: 2,
@@ -123,18 +128,18 @@ export default function SelfVerifyPage() {
         // Add a small delay to ensure proper initialization
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        console.log("Self App created successfully:", app);
+        logger.info("Self App created successfully", { universalLinkGenerated: !!app }, "VERIFICATION");
         setSelfApp(app);
 
         const universalLink = getUniversalLink(app);
-        console.log("Universal link generated:", universalLink);
+        logger.info("Universal link generated successfully", { linkLength: universalLink.length }, "VERIFICATION");
         setUniversalLink(universalLink);
 
         setIsLoading(false);
       } catch (error) {
-        console.error("Failed to initialize Self app:", error);
-        console.error("Error details:", error);
-        setError(`Self App initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error("Failed to initialize Self app", { error: errorMessage }, "VERIFICATION");
+        setError(`Self App initialization failed: ${errorMessage}`);
         setIsLoading(false);
       }
     };
@@ -142,7 +147,7 @@ export default function SelfVerifyPage() {
     // Add timeout to prevent hanging - only for initialization, not for QR code scanning
     const timeoutId = setTimeout(() => {
       if (isLoading && !selfApp) {
-        console.error("Self App initialization timed out");
+        logger.error("Self App initialization timed out", null, "VERIFICATION");
         setError("QR Code Loading Failed - Self App initialization timed out. Please try again.");
         setIsLoading(false);
       }
@@ -176,7 +181,7 @@ export default function SelfVerifyPage() {
         setTimeout(() => setLinkCopied(false), 2000);
       })
       .catch((err) => {
-        console.error("Failed to copy text: ", err);
+        logger.error("Failed to copy text to clipboard", { error: err instanceof Error ? err.message : err }, "VERIFICATION");
         displayToast("Failed to copy link");
       });
   };
@@ -202,7 +207,7 @@ export default function SelfVerifyPage() {
           walletAddress: walletAddress,
           source: 'hacker-rep-self-verify',
           timestamp: Date.now(),
-          contractAddress: "0xD132024926D56D8c1a9f7628942bA4B12229718F",
+          contractAddress: "0xF54C11EbC39905dd88496E098CDEeC565F79a696", // Updated to correct contract
           chainId: 42220,
           demographics: {
             nationality: "INDIA",
@@ -213,16 +218,39 @@ export default function SelfVerifyPage() {
       });
 
       if (response.ok) {
-        displayToast("✅ Successfully verified! You can now vote with enhanced power!");
+        displayToast("✅ Verification synced! Checking voting status...");
+
+        // Wait a moment for database updates to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Refresh verification status to confirm user can vote
+        const statusResponse = await fetch(`/api/self/verification-status?walletAddress=${walletAddress}`);
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+
+          if (statusData.success && statusData.data.votingEligible) {
+            displayToast("🎉 SUCCESS! You can now vote with enhanced power!");
+          } else {
+            displayToast("⚠️ Verified but voting eligibility pending. Please refresh in a moment.");
+          }
+        }
+
         setTimeout(() => {
           router.push("/dashboard");
-        }, 2000);
+        }, 3000);
       } else {
-        throw new Error('Failed to sync with HackerRep');
+        const errorText = await response.text();
+        throw new Error(`Failed to sync with HackerRep: ${errorText}`);
       }
     } catch (error) {
-      console.error('Failed to sync verification:', error);
-      displayToast("Verification successful but sync failed. Please try again.");
+      logger.error('Failed to sync verification', { error: error instanceof Error ? error.message : error }, "VERIFICATION");
+      displayToast("Verification successful but sync failed. Please try refreshing the page.");
+
+      // Still redirect to dashboard after delay
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 3000);
     }
   };
 
@@ -327,7 +355,7 @@ export default function SelfVerifyPage() {
                 selfApp={selfApp}
                 onSuccess={handleSuccessfulVerification}
                 onError={(error) => {
-                  console.error("Self Protocol verification error:", error);
+                  logger.error("Self Protocol verification error", { error: error instanceof Error ? error.message : error }, "VERIFICATION");
                   displayToast("Error: Failed to verify identity. Please try again.");
                 }}
               />

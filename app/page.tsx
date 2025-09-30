@@ -19,6 +19,7 @@ import Link from "next/link"
 import { Logo } from "@/components/pixel/logo"
 import { NFCHero } from "@/components/pixel/nfc-hero"
 import { StatCard } from "@/components/pixel/stat-card"
+import { logger } from "@/lib/logger"
 import { ActivityFeed } from "@/components/pixel/activity-feed"
 import { PixelButton } from "@/components/pixel/pixel-button"
 import { AutoRegister } from "@/components/AutoRegister"
@@ -94,7 +95,7 @@ export default function HomePage() {
         setStats(data)
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error)
+      logger.error('Failed to fetch stats', { error: error instanceof Error ? error.message : error }, 'API');
     }
   }
 
@@ -118,7 +119,7 @@ export default function HomePage() {
         setShowOnboarding(true)
       }
     } catch (error) {
-      console.error('Failed to check ZK credentials:', error)
+      logger.error('Failed to check ZK credentials', { error: error instanceof Error ? error.message : error }, 'API');
       // On error, also show onboarding to help user get started
       setShowOnboarding(true)
     }

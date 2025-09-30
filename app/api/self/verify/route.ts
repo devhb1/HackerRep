@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SelfBackendVerifier, AllIds, DefaultConfigStore } from "@selfxyz/core";
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 // Use service role key for backend operations to bypass RLS
 const supabaseAdmin = createClient(
@@ -43,7 +44,7 @@ const selfBackendVerifier = new SelfBackendVerifier(
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        console.log('Self verification request received:', body);
+        logger.info('Self verification request received', { hasProof: !!body.proof, hasPublicSignals: !!body.publicSignals }, 'VERIFICATION');
 
         // Extract data according to Self Protocol format
         const { attestationId, proof, publicSignals, userContextData } = body;
@@ -85,9 +86,10 @@ export async function POST(request: NextRequest) {
             }
 
             // Extract wallet address from userContextData (hex string)
-            console.log('Raw userContextData:', userContextData);
             const walletAddr = userContextData?.toLowerCase();
-            console.log('Processed wallet address:', walletAddr);            // Store verification data in self_verifications table (using service role to bypass RLS)
+            logger.info('Processing Self verification for wallet', { walletAddress: walletAddr }, 'VERIFICATION');
+
+            // Store verification data in self_verifications table (using service role to bypass RLS)
             // First check if verification already exists
             const { data: existingVerification } = await supabaseAdmin
                 .from('self_verifications')
@@ -137,13 +139,13 @@ export async function POST(request: NextRequest) {
             }
 
             if (verificationError) {
-                console.error('Error storing verification:', verificationError);
-                console.error('Verification error details:', {
+                logger.error('Error storing verification', {
                     code: verificationError.code,
                     message: verificationError.message,
                     details: verificationError.details,
-                    hint: verificationError.hint
-                });
+                    hint: verificationError.hint,
+                    walletAddress: walletAddr
+                }, 'VERIFICATION');
                 return NextResponse.json({
                     status: "error",
                     result: false,
@@ -153,32 +155,75 @@ export async function POST(request: NextRequest) {
                 }, { status: 200 });
             }
 
-            // Update users table with demographic data and verification status
-            const { error: userUpdateError } = await supabaseAdmin
+            // Check if user exists, create if not, update if exists
+            const { data: existingUser, error: fetchUserError } = await supabaseAdmin
                 .from('users')
-                .update({
-                    nationality: nationality,
-                    gender: gender,
-                    age: age,
-                    self_verified: true,
-                    verification_level: 3, // Level 3 = Self Protocol verified
-                    voting_eligible: true,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('wallet_address', walletAddr);
+                .select('id, wallet_address')
+                .eq('wallet_address', walletAddr)
+                .single();
 
-            if (userUpdateError) {
-                console.error('Error updating user demographics:', userUpdateError);
-                // Don't fail the verification for this error
+            if (fetchUserError && fetchUserError.code !== 'PGRST116') {
+                logger.error('Error checking existing user', { error: fetchUserError, walletAddress: walletAddr }, 'VERIFICATION');
+                // Continue anyway
             }
 
-            console.log('✅ Self verification successful:', {
+            let userError: Error | null = null;
+
+            if (!existingUser) {
+                // Create new user with demographic data and verification status
+                const { error: createUserError } = await supabaseAdmin
+                    .from('users')
+                    .insert({
+                        wallet_address: walletAddr,
+                        display_name: `User ${walletAddr.substring(0, 6)}...${walletAddr.substring(walletAddr.length - 4)}`,
+                        nationality: nationality,
+                        gender: gender,
+                        age: age,
+                        self_verified: true,
+                        verification_level: 3, // Level 3 = Self Protocol verified
+                        voting_eligible: nationality === 'INDIA', // Only Indian users can vote
+                        reputation_score: 100, // Base reputation for verified users
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    });
+
+                userError = createUserError;
+                if (!createUserError) {
+                    logger.info('Created new user with Self verification data', { walletAddress: walletAddr, nationality }, 'VERIFICATION');
+                }
+            } else {
+                // Update existing user with demographic data and verification status
+                const { error: updateUserError } = await supabaseAdmin
+                    .from('users')
+                    .update({
+                        nationality: nationality,
+                        gender: gender,
+                        age: age,
+                        self_verified: true,
+                        verification_level: 3, // Level 3 = Self Protocol verified
+                        voting_eligible: nationality === 'INDIA', // Only Indian users can vote
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('wallet_address', walletAddr);
+
+                userError = updateUserError;
+                if (!updateUserError) {
+                    logger.info('Updated existing user with Self verification data', { walletAddress: walletAddr, nationality }, 'VERIFICATION');
+                }
+            }
+
+            if (userError) {
+                logger.error('Error managing user demographics', { error: userError, walletAddress: walletAddr }, 'VERIFICATION');
+                // Don't fail the verification for this error, but log it
+            }
+
+            logger.info('Self verification successful', {
                 walletAddress: walletAddr,
                 nationality,
                 gender,
                 age,
                 attestationId
-            });
+            }, 'VERIFICATION');
 
             // Return success response in Self Protocol expected format
             const response = NextResponse.json({
@@ -205,7 +250,7 @@ export async function POST(request: NextRequest) {
 
         } else {
             // Verification failed
-            console.error('Self Protocol verification failed:', result.isValidDetails);
+            logger.error('Self Protocol verification failed', { validationDetails: result.isValidDetails }, 'VERIFICATION');
             return NextResponse.json({
                 status: "error",
                 result: false,
@@ -216,7 +261,7 @@ export async function POST(request: NextRequest) {
         }
 
     } catch (error) {
-        console.error('Self verification error:', error);
+        logger.error('Self verification error', { error: error instanceof Error ? error.message : error }, 'VERIFICATION');
         return NextResponse.json({
             status: "error",
             result: false,

@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Use service role key for backend operations to bypass RLS
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Service role bypasses RLS
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    }
+);
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        
+
         const {
             walletAddress,
             source,
@@ -15,36 +27,74 @@ export async function POST(request: NextRequest) {
         } = body;
 
         if (!walletAddress) {
-            return NextResponse.json({ 
-                error: 'Missing wallet address' 
+            return NextResponse.json({
+                error: 'Missing wallet address'
             }, { status: 400 });
         }
 
         console.log('🔄 Syncing Self Protocol verification for:', walletAddress);
 
-        // Update user with Self Protocol verification data
-        const { data: user, error: userError } = await supabase
+        // Check if user exists, create if not, update if exists
+        const { data: existingUser, error: fetchError } = await supabaseAdmin
             .from('users')
-            .update({
-                self_verified: true,
-                nationality: demographics?.nationality || 'INDIA',
-                gender: demographics?.gender || 'MALE',
-                age: demographics?.age || 25,
-                updated_at: new Date().toISOString()
-            })
+            .select('id, wallet_address')
             .eq('wallet_address', walletAddress.toLowerCase())
-            .select()
             .single();
 
+        let user, userError;
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+            console.error('Error checking existing user:', fetchError);
+        }
+
+        if (!existingUser) {
+            // Create new user
+            const { data, error } = await supabaseAdmin
+                .from('users')
+                .insert({
+                    wallet_address: walletAddress.toLowerCase(),
+                    display_name: `User ${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`,
+                    self_verified: true,
+                    nationality: demographics?.nationality || 'INDIA',
+                    gender: demographics?.gender || 'MALE',
+                    age: demographics?.age || 25,
+                    voting_eligible: (demographics?.nationality || 'INDIA') === 'INDIA',
+                    reputation_score: 100,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+            user = data;
+            userError = error;
+        } else {
+            // Update existing user
+            const { data, error } = await supabaseAdmin
+                .from('users')
+                .update({
+                    self_verified: true,
+                    nationality: demographics?.nationality || 'INDIA',
+                    gender: demographics?.gender || 'MALE',
+                    age: demographics?.age || 25,
+                    voting_eligible: (demographics?.nationality || 'INDIA') === 'INDIA',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('wallet_address', walletAddress.toLowerCase())
+                .select()
+                .single();
+            user = data;
+            userError = error;
+        }
+
         if (userError) {
-            console.error('Error updating user:', userError);
-            return NextResponse.json({ 
-                error: 'Failed to update user verification status' 
+            console.error('Error managing user:', userError);
+            return NextResponse.json({
+                error: 'Failed to update user verification status'
             }, { status: 500 });
         }
 
         // Store verification session
-        const { data: session, error: sessionError } = await supabase
+        const { data: session, error: sessionError } = await supabaseAdmin
             .from('verification_sessions')
             .insert({
                 wallet_address: walletAddress.toLowerCase(),

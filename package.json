@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@divvi/referral-sdk": "^2.3.0",
     "@ensdomains/ensjs": "^4.0.2",
     "@hookform/resolvers": "^3.10.0",
     "@noble/curves": "^1.4.0",
