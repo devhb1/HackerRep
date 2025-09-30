@@ -107,24 +107,35 @@ export function ZKOnboarding() {
     }, [isConnected, address])
 
     const fetchCredentials = async () => {
+        if (!address) {
+            console.warn('⚠️ No wallet address available for fetching credentials')
+            setLoading(false)
+            return
+        }
+
         try {
+            console.log('🔄 Fetching credentials for address:', address)
             const response = await fetch(`/api/zk-reputation?walletAddress=${address}&action=get_reputation`)
+            console.log('📡 API Response status:', response.status)
             if (response.ok) {
                 const data = await response.json()
-                console.log('📊 Fetched credentials:', data.zkCredentials)
-                setCredentials(data.zkCredentials || {
-                    education_score: 0,
-                    github_score: 0,
-                    social_score: 0,
-                    total_base_score: 0,
-                    reputation_tier: 'newcomer',
-                    completed_onboarding: false,
-                    has_degree: false,
-                    has_certification: false,
-                    github_username: null,
-                    github_data: null,
-                    education_proofs: null,
-                    github_proofs: null
+                console.log('📊 Fetched credentials response:', data)
+                const creds = data.zkCredentials || {}
+                setCredentials({
+                    id: creds.id || '',
+                    wallet_address: creds.wallet_address || address || '',
+                    education_score: creds.education_score || 0,
+                    github_score: creds.github_score || 0,
+                    social_score: creds.social_score || 0,
+                    total_base_score: creds.total_base_score || 0,
+                    reputation_tier: creds.reputation_tier || 'newcomer',
+                    completed_onboarding: creds.completed_onboarding || false,
+                    has_degree: creds.has_degree || false,
+                    has_certification: creds.has_certification || false,
+                    github_username: creds.github_username || null,
+                    github_data: creds.github_data || null,
+                    created_at: creds.created_at || new Date().toISOString(),
+                    updated_at: creds.updated_at || new Date().toISOString()
                 })
 
                 // Auto-expand the next step after GitHub connection
@@ -153,7 +164,24 @@ export function ZKOnboarding() {
                 })
             }
         } catch (error) {
-            console.error('Failed to fetch ZK credentials:', error)
+            console.error('❌ Failed to fetch ZK credentials:', error)
+            // Set default credentials on error
+            setCredentials({
+                id: '',
+                wallet_address: address || '',
+                education_score: 0,
+                github_score: 0,
+                social_score: 0,
+                total_base_score: 0,
+                reputation_tier: 'newcomer',
+                completed_onboarding: false,
+                has_degree: false,
+                has_certification: false,
+                github_username: null,
+                github_data: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
         }
         setLoading(false)
     }
@@ -238,11 +266,29 @@ export function ZKOnboarding() {
                     <Loader2 className="h-8 w-8 animate-spin" />
                     <span className="ml-2">Loading ZK Registry...</span>
                 </div>
+                <div className="mt-4 text-center text-sm text-muted-foreground">
+                    {address ? `Fetching data for ${address.substring(0, 6)}...${address.substring(address.length - 4)}` : 'Connecting...'}
+                </div>
             </Card>
         )
     }
 
-    if (!credentials) return null
+    if (!credentials) {
+        console.warn('⚠️ No credentials available, showing fallback UI')
+        return (
+            <Card className="p-6">
+                <div className="flex items-center justify-center">
+                    <AlertCircle className="h-8 w-8 text-yellow-500" />
+                    <span className="ml-2">Unable to load ZK credentials. Please refresh the page.</span>
+                </div>
+                {address && (
+                    <div className="mt-2 text-center text-sm text-muted-foreground">
+                        Connected: {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                    </div>
+                )}
+            </Card>
+        )
+    }
 
     const steps: OnboardingStep[] = [
         {
@@ -287,7 +333,7 @@ export function ZKOnboarding() {
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-4">
-                        <Logo className="h-12 w-12 flex-shrink-0" />
+                        <Logo className="h-12 w-12 flex-shrink-0" hideText />
                         <div className="min-w-0">
                             <h2 className="text-2xl font-bold text-primary mb-1">HackerRep Registry</h2>
                             <p className="text-muted-foreground text-sm">
@@ -309,7 +355,7 @@ export function ZKOnboarding() {
                                 </div>
                             )}
                             <div className="mt-1">
-                                <span className="text-accent">Reputation: {credentials.total_base_score}</span>
+                                <span className="text-accent">Reputation: {credentials.total_base_score || 0}</span>
                             </div>
                         </div>
                     </div>

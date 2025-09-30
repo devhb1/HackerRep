@@ -7,9 +7,10 @@ type Props = {
   className?: string
   variant?: 'header' | 'hero' | 'footer'
   showTagline?: boolean
+  hideText?: boolean
 }
 
-export function Logo({ className, variant = 'header', showTagline = true }: Props) {
+export function Logo({ className, variant = 'header', showTagline = true, hideText = false }: Props) {
   const logoSize = variant === 'hero' ? 'text-4xl md:text-6xl' : variant === 'header' ? 'text-xl md:text-2xl' : 'text-lg'
   const iconSize = variant === 'hero' ? 'text-5xl' : variant === 'header' ? 'text-2xl' : 'text-xl'
 
@@ -39,20 +40,22 @@ export function Logo({ className, variant = 'header', showTagline = true }: Prop
       </div>
 
       {/* Text */}
-      <div className="flex flex-col">
-        <span className={cn(
-          "font-pixel text-primary tracking-tight transition-colors duration-300",
-          "group-hover:text-cyan-400 glitch",
-          logoSize
-        )}>
-          HackerRep
-        </span>
-        {showTagline && (
-          <span className="text-xs text-muted-foreground font-mono">
-            {variant === 'hero' ? 'Zero-Knowledge Reputation Protocol' : 'ZK Reputation'}
+      {!hideText && (
+        <div className="flex flex-col">
+          <span className={cn(
+            "font-pixel text-primary tracking-tight transition-colors duration-300",
+            "group-hover:text-cyan-400 glitch",
+            logoSize
+          )}>
+            HackerRep
           </span>
-        )}
-      </div>
+          {showTagline && (
+            <span className="text-xs text-muted-foreground font-mono">
+              {variant === 'hero' ? 'Zero-Knowledge Reputation Protocol' : 'ZK Reputation'}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Floating particles effect */}
       {variant === 'hero' && (

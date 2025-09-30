@@ -124,6 +124,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -131,14 +132,17 @@
 
 /* Pixel-specific utilities */
 .font-pixel {
-  font-family: var(--font-pixel), ui-monospace, monospace;
+  font-family: var(--font-pixel), "Press Start 2P", ui-monospace, monospace;
+  /* Ensure text remains readable during font load */
+  font-display: swap;
 }
 
-/* Glitch effect (subtle) */
+/* Glitch effect (disabled to fix text overlap issue) */
 .glitch {
   position: relative;
-  text-shadow: 1px 0 var(--color-accent), -1px 0 var(--color-primary);
+  /* text-shadow disabled to prevent duplicate text rendering */
 }
+
 .glow {
   box-shadow: 0 0 0.75rem color-mix(in oklab, var(--color-primary) 40%, transparent);
 }
@@ -161,30 +165,38 @@
   0% {
     box-shadow: 0 0 0 0 rgba(0, 178, 255, 0.5);
   }
+
   70% {
     box-shadow: 0 0 0 14px rgba(0, 178, 255, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(0, 178, 255, 0);
   }
 }
+
 @keyframes typing-dots {
   0% {
     opacity: 0.2;
   }
+
   20% {
     opacity: 1;
   }
+
   100% {
     opacity: 0.2;
   }
 }
+
 .typing-dot {
   animation: typing-dots 1.4s infinite ease-in-out;
 }
+
 .typing-dot:nth-child(2) {
   animation-delay: .2s;
 }
+
 .typing-dot:nth-child(3) {
   animation-delay: .4s;
 }
