@@ -598,23 +598,15 @@ export function ZKOnboarding() {
                                                         formData.append('institution', institution)
                                                         formData.append('walletAddress', address)
 
-                                                        const academicResponse = await fetch('/api/zk-reputation', {
+                                                        const academicResponse = await fetch('/api/zk-proofs/academic', {
                                                             method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({
-                                                                walletAddress: address,
-                                                                action: 'generate_academic_proof',
-                                                                data: {
-                                                                    degreeType: degreeType,
-                                                                    institution: institution
-                                                                }
-                                                            })
+                                                            body: formData
                                                         })
 
                                                         if (academicResponse.ok) {
                                                             const academicResult = await academicResponse.json()
                                                             if (academicResult.success) {
-                                                                results.push(`✅ Academic zkPDF proof: ${academicResult.proof.score} points`)
+                                                                results.push(`✅ Academic zkPDF proof: ${academicResult.scoreAwarded} points`)
                                                                 console.log('✅ Academic zkPDF proof generated successfully')
                                                                 // Refresh credentials immediately to show updated score
                                                                 await fetchCredentials()
@@ -944,17 +936,9 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
             const controller = new AbortController()
             const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
-            const response = await fetch('/api/zk-reputation', {
+            const response = await fetch('/api/zk-proofs/academic', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    walletAddress: walletAddress,
-                    action: 'generate_academic_proof',
-                    data: {
-                        degreeType: selectedDegree,
-                        institution: institution
-                    }
-                }),
+                body: formData,
                 signal: controller.signal
             })
 
@@ -969,7 +953,7 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
             if (result.success) {
                 setZkProofStatus('verifying')
-                setProofDetails(result.proof)
+                setProofDetails(result.zkpdfProof)
 
                 // Small delay to show verification step
                 await new Promise(resolve => setTimeout(resolve, 1500))
@@ -978,13 +962,12 @@ function EducationStep({ credentials, onUpdate, walletAddress }: { credentials: 
 
                 // Show success message with zkPDF details
                 alert(`🏆 zkPDF Academic Proof Generated!\n\n` +
-                    `✅ Degree: ${result.academic.degreeType}\n` +
-                    `✅ Institution: ${result.academic.institution}\n` +
-                    `✅ Reputation Points: ${result.proof.score}\n` +
-                    `✅ Proof ID: ${result.proof.proofId}\n\n` +
+                    `✅ Degree: ${result.degreeType}\n` +
+                    `✅ Institution: ${result.institution}\n` +
+                    `✅ Reputation Points: ${result.scoreAwarded}\n` +
+                    `✅ Proof ID: ${result.zkpdfProof.proofId}\n\n` +
                     `🔒 Privacy Protected: Student details hidden via ZK commitment\n` +
-                    `🔍 Commitment: ${result.proof.commitment.substring(0, 16)}...\n` +
-                    `🚫 Nullifier: ${result.proof.nullifier.substring(0, 16)}...\n\n` +
+                    `✅ zkPDF Generated: ${result.zkpdfGenerated}\n\n` +
                     `Your academic credentials are now ZK-verified!`)
 
                 onUpdate()
